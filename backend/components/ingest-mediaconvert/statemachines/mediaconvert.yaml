@@ -1,0 +1,241 @@
+StartAt: IsMp4File
+States:
+  IsMp4File:
+    Type: Choice
+    Choices:
+      - Variable: $.detail.object.key
+        StringMatches: "*.mp4"
+        Next: Parameters
+    Default: IgnoreFile
+  IgnoreFile:
+    Type: Succeed
+  Parameters:
+    Type: Pass
+    Parameters:
+      Id.$: States.UUID()
+      ExecutionName.$: $$.Execution.Name
+    ResultPath: $.Parameters
+    Next: CreateFlows
+  CreateFlows:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Parameters:
+      FunctionName: ${FlowsFunctionArn}
+      Payload.$: $
+    OutputPath: $.Payload
+    Next: FlowsCreated
+  FlowsCreated:
+    Type: Choice
+    Choices:
+      - Variable: $.JobSpec
+        IsPresent: false
+        Next: Failed
+    Default: CopyObject
+  Failed:
+    Type: Fail
+    CausePath: $.Cause
+    ErrorPath: $.Error
+  CopyObject:
+    Type: Task
+    Resource: arn:aws:states:::aws-sdk:s3:copyObject
+    Parameters:
+      CopySource.$: States.Format('{}/{}', $.detail.bucket.name, $.detail.object.key)
+      Bucket.$: $.detail.bucket.name
+      Key.$: $.Parameters.CopiedUpload
+    ResultPath: null
+    Next: SetupLoop
+  SetupLoop:
+    Type: Map
+    ItemsPath: $.Flows.Parameters
+    ItemSelector:
+      SourceId.$: $.Parameters.Id
+      Index.$: $$.Map.Item.Index
+      Data.$: $$.Map.Item.Value
+    ItemProcessor:
+      ProcessorConfig:
+        Mode: INLINE
+      StartAt: PutPolicy
+      States:
+        PutPolicy:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:iam:putRolePolicy
+          Parameters:
+            RoleName: ${IngestionFunctionRoleName}
+            PolicyName.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+            PolicyDocument.$: States.Format('\{"Version":"2012-10-17","Statement":[\{"Effect":"Allow","Action":"s3:GetObject","Resource":"arn:aws:s3:::{}/*"\}]\}', $.Data.bucket)
+          ResultPath: null
+          Next: PutParameter
+        PutParameter:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:ssm:putParameter
+          Parameters:
+            Type: String
+            Name.$: States.Format('/{}/{}', $.Data.bucket, $.Data.prefix)
+            Value.$: States.JsonToString($.Data.value)
+          ResultPath: null
+          Next: PutRule
+        PutRule:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:putRule
+          Parameters:
+            Name.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+            State: ENABLED
+            EventPattern.$: States.Format('\{"detail-type":["Object Created"],"source":["aws.s3"],"detail":\{"bucket":\{"name":["{}"]\},"object":\{"key":[\{"prefix":"{}_"\}]\}\}\}', $.Data.bucket, $.Data.prefix)
+          ResultPath: $.PutRule
+          Next: AddPermission
+        AddPermission:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:lambda:addPermission
+          Parameters:
+            StatementId.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+            Action: lambda:InvokeFunction
+            FunctionName: ${IngestionFunctionArn}
+            Principal: events.amazonaws.com
+            SourceArn.$: $.PutRule.RuleArn
+          ResultPath: null
+          Next: PutTarget
+        PutTarget:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:putTargets
+          Parameters:
+            Rule.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+            Targets:
+              - Id: TAMS-Ingestion
+                Arn: ${IngestionFunctionArn}
+          ResultPath: null
+          End: true
+    ResultPath: null
+    Next: WaitBefore
+  WaitBefore:
+    Type: Wait
+    Seconds: 30
+    Next: MediaConvertJob
+  MediaConvertJob:
+    Type: Task
+    Resource: arn:aws:states:::mediaconvert:createJob.sync
+    Parameters:
+      Queue: ${MediaConvertQueueArn}
+      Role: ${MediaConvertRoleArn}
+      Settings.$: $.JobSpec.Settings
+      Tags:
+        source_id.$: $.Parameters.Id
+        trigger_key.$: $.detail.object.key
+    ResultPath: null
+    Catch:
+      - Comment: Cleanup on error
+        ErrorEquals:
+          - States.ALL
+        ResultPath: null
+        Next: CleardownLoop
+    Next: WaitAfter
+  WaitAfter:
+    Type: Wait
+    Seconds: 30
+    Next: CleardownLoop
+  CleardownLoop:
+    Type: Map
+    ItemsPath: $.Flows.Parameters
+    ItemSelector:
+      SourceId.$: $.Parameters.Id
+      Index.$: $$.Map.Item.Index
+      Data.$: $$.Map.Item.Value
+    ItemProcessor:
+      ProcessorConfig:
+        Mode: INLINE
+      StartAt: RemoveTarget
+      States:
+        RemoveTarget:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:removeTargets
+          Parameters:
+            Rule.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+            Ids:
+              - TAMS-Ingestion
+          ResultPath: null
+          Next: RemovePermission
+        RemovePermission:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:lambda:removePermission
+          Parameters:
+            StatementId.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+            FunctionName: ${IngestionFunctionArn}
+          ResultPath: null
+          Next: DeleteRule
+        DeleteRule:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:deleteRule
+          Parameters:
+            Name.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+          ResultPath: null
+          Next: DeleteParameter
+        DeleteParameter:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:ssm:deleteParameter
+          Parameters:
+            Name.$: States.Format('/{}/{}', $.Data.bucket, $.Data.prefix)
+          ResultPath: null
+          Next: DeletePolicy
+        DeletePolicy:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:iam:deleteRolePolicy
+          Parameters:
+            RoleName: ${IngestionFunctionRoleName}
+            PolicyName.$: States.Format('MediaConvert-{}-{}', $.SourceId, $.Index)
+          ResultPath: null
+          End: True
+    ResultPath: null
+    Next: ListObjects
+  ListObjects:
+    Type: Task
+    Resource: arn:aws:states:::aws-sdk:s3:listObjectsV2
+    Parameters:
+      Bucket.$: $.detail.bucket.name
+      Prefix.$: States.Format('jobs/{}/',$$.Execution.Name)
+      MaxKeys: 1000
+    ResultPath: $.ListObjects
+    Next: BuildKeyList
+  BuildKeyList:
+    Type: Map
+    ItemsPath: $.ListObjects.Contents
+    ItemSelector:
+      Item.$: $$.Map.Item.Value
+    ItemProcessor:
+      ProcessorConfig:
+        Mode: INLINE
+      StartAt: KeyOnly
+      States:
+        KeyOnly:
+          Type: Pass
+          Parameters:
+            Key.$: $.Item.Key
+          End: true
+    ResultPath: $.Objects
+    Next: DeleteObjects
+  DeleteObjects:
+    Type: Task
+    Resource: arn:aws:states:::aws-sdk:s3:deleteObjects
+    Parameters:
+      Bucket.$: $.detail.bucket.name
+      Delete:
+        Objects.$: $.Objects
+    ResultPath: null
+    Next: ContinuationTokenPresent
+  ContinuationTokenPresent:
+    Type: Choice
+    Choices:
+      - Variable: $.ListObjects.NextContinuationToken
+        IsPresent: true
+        Next: ListObjects-ContinuationToken
+    Default: Success
+  ListObjects-ContinuationToken:
+    Type: Task
+    Resource: arn:aws:states:::aws-sdk:s3:listObjectsV2
+    Parameters:
+      Bucket.$: $.detail.bucket.name
+      Prefix.$: States.Format('jobs/{}/',$$.Execution.Name)
+      ContinuationToken.$: $.ListObjects.NextContinuationToken
+      MaxKeys: 1000
+    ResultPath: $.ListObjects
+    Next: BuildKeyList
+  Success:
+    Type: Succeed

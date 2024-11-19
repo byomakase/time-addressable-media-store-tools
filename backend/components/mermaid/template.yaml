@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  UserPoolId:
+    Type: String
+
+  TAMSApiEndpoint:
+    Type: String
+
+  UserPoolClientId:
+    Type: String
+
+  TokenUrl:
+    Type: String
+
+  AuthRole:
+    Type: String
+
+  OpenIdAuthLayerArn:
+    Type: String
+
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Tracing: Active
+    Timeout: 30
+    MemorySize: 128
+    Handler: app.lambda_handler
+    Runtime: python3.12
+    Architectures:
+      - arm64
+
+  Api:
+    EndpointConfiguration:
+      Type: REGIONAL
+    Auth:
+      DefaultAuthorizer: AWS_IAM
+      AddDefaultAuthorizerToCorsPreflight: False
+    TracingEnabled: true
+    MethodSettings:
+      - ResourcePath: /*
+        HttpMethod: '*'
+        DataTraceEnabled: True
+        LoggingLevel: INFO
+
+Resources:
+  AuthRolePolicyMermaid:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !Ref AuthRole
+      PolicyName: MermaidApi
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:Invoke
+            Resource:
+              - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/GET/mermaid/*
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt ApiMermaidFunction.Arn
+
+  Api:
+
+    # checkov:skip=CKV_AWS_73
+    # checkov:skip=CKV_AWS_76
+    # checkov:skip=CKV_AWS_80
+    # checkov:skip=CKV_AWS_120
+    Type: AWS::Serverless::Api
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - W1028
+    Properties:
+      OpenApiVersion: 3.0.1
+      StageName: Prod
+      Cors:
+        AllowMethods: '''*'''
+        AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        AllowOrigin: '''*'''
+      AlwaysDeploy: True
+
+  ApiMermaidFunction:
+
+    # checkov:skip=CKV_AWS_115
+    # checkov:skip=CKV_AWS_116
+    # checkov:skip=CKV_AWS_117
+    # checkov:skip=CKV_AWS_173
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+    Properties:
+      CodeUri: functions/api-mermaid/
+      Layers:
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2-Arm64:69
+        - !Ref OpenIdAuthLayerArn
+      Environment:
+        Variables:
+          TAMS_ENDPOINT: !Ref TAMSApiEndpoint
+          TOKEN_URL: !Ref TokenUrl
+          USER_POOL_ID: !Ref UserPoolId
+          CLIENT_ID: !Ref UserPoolClientId
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:DescribeUserPoolClient
+              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+      Events:
+        getMermaid:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /mermaid/{entity}/{entityId}
+            Method: get
+
+Outputs:
+  ApiEndpoint:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Api.Stage}

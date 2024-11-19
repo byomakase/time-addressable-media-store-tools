@@ -1,0 +1,249 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Components
+        Parameters:
+          - DeployMermaidApi
+          - DeployHlsApi
+          - DeployIngestMediaLive
+          - DeployIngestMediaConvert
+      - Label:
+          default: Configuration
+        Parameters:
+          - UserPoolId
+          - TAMSApiEndpoint
+          - UserPoolClientId
+          - TokenUrl
+          - FlowSegmentsTable
+          - AuthRole
+    ParameterLabels:
+      DeployMermaidApi:
+        default: Deploy Mermaid Diagram Endpoint?
+      DeployHlsApi:
+        default: Deploy HLS Endpoint?
+      DeployIngestMediaLive:
+        default: Deploy MediaLive Channel ingest?
+      DeployIngestMediaConvert:
+        default: Deploy MediaConvert Job ingest?
+      UserPoolId:
+        default: TAMS API Cognito User Pool Id
+      TAMSApiEndpoint:
+        default: TAMS API Endpoint
+      UserPoolClientId:
+        default: TAMS API Cognito User Pool Client Id
+      TokenUrl:
+        default: TAMS API Cognito User Pool Token Url
+      FlowSegmentsTable:
+        default: TAMS API Flow Segments DynamoDb Table
+      AuthRole:
+        default: TAMS API Cognito Auth Role
+
+Parameters:
+  DeployMermaidApi:
+    Type: String
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+
+  DeployHlsApi:
+    Type: String
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+
+  DeployIngestMediaLive:
+    Type: String
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+
+  DeployIngestMediaConvert:
+    Type: String
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+
+  UserPoolId:
+    Type: String
+
+  TAMSApiEndpoint:
+    Type: String
+
+  UserPoolClientId:
+    Type: String
+
+  TokenUrl:
+    Type: String
+
+  FlowSegmentsTable:
+    Type: String
+
+  AuthRole:
+    Type: String
+
+Conditions:
+  DeployMermaidApi: !Equals [!Ref DeployMermaidApi, "Yes"]
+
+  DeployHlsApi: !Equals [!Ref DeployHlsApi, "Yes"]
+
+  DeployIngestMediaLive: !Equals [!Ref DeployIngestMediaLive, "Yes"]
+
+  DeployIngestMediaConvert: !Equals [!Ref DeployIngestMediaConvert, "Yes"]
+
+  DeployApi: !Or [!Condition DeployMermaidApi, !Condition DeployHlsApi, !Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
+
+  DeployIngest: !Or [!Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
+
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Tracing: Active
+    Timeout: 30
+    MemorySize: 128
+    Handler: app.lambda_handler
+    Runtime: python3.12
+    Architectures:
+      - arm64
+
+  Api:
+    EndpointConfiguration:
+      Type: REGIONAL
+    Auth:
+      DefaultAuthorizer: AWS_IAM
+      AddDefaultAuthorizerToCorsPreflight: False
+    TracingEnabled: true
+    MethodSettings:
+      - ResourcePath: /*
+        HttpMethod: '*'
+        DataTraceEnabled: True
+        LoggingLevel: INFO
+
+Resources:
+  OpenIdAuthLayer:
+    Type: AWS::Serverless::LayerVersion
+    Metadata:
+      BuildMethod: python3.12
+      BuildArchitecture: arm64
+    Properties:
+      RetentionPolicy: Delete
+      ContentUri: layers/openid-auth
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - arm64
+    Condition: DeployApi
+
+  MermaidApiStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/mermaid/template.yaml
+      Parameters:
+        UserPoolId: !Ref UserPoolId
+        TAMSApiEndpoint: !Ref TAMSApiEndpoint
+        UserPoolClientId: !Ref UserPoolClientId
+        TokenUrl: !Ref TokenUrl
+        AuthRole: !Ref AuthRole
+        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+    Condition: DeployMermaidApi
+
+  HlsApiStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/hls/template.yaml
+      Parameters:
+        UserPoolId: !Ref UserPoolId
+        TAMSApiEndpoint: !Ref TAMSApiEndpoint
+        UserPoolClientId: !Ref UserPoolClientId
+        TokenUrl: !Ref TokenUrl
+        FlowSegmentsTable: !Ref FlowSegmentsTable
+        AuthRole: !Ref AuthRole
+        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+    Condition: DeployHlsApi
+
+  IngestStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/ingest/template.yaml
+      Parameters:
+        UserPoolId: !Ref UserPoolId
+        TAMSApiEndpoint: !Ref TAMSApiEndpoint
+        UserPoolClientId: !Ref UserPoolClientId
+        TokenUrl: !Ref TokenUrl
+        AuthRole: !Ref AuthRole
+        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+    Condition: DeployIngest
+
+  IngestMediaLiveStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/ingest-medialive/template.yaml
+      Parameters:
+        AuthRole: !Ref AuthRole
+        SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
+        SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
+        S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
+        S3IngestionFunctionArn: !GetAtt IngestStack.Outputs.S3IngestionFunctionArn
+    Condition: DeployIngestMediaLive
+
+  IngestMediaConvertStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/ingest-mediaconvert/template.yaml
+      Parameters:
+        AuthRole: !Ref AuthRole
+        SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
+        SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
+        S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
+        S3IngestionFunctionArn: !GetAtt IngestStack.Outputs.S3IngestionFunctionArn
+    Condition: DeployIngestMediaConvert
+
+Outputs:
+  MermaidEndpoint:
+    Value: !If
+      - DeployMermaidApi
+      - !GetAtt MermaidApiStack.Outputs.ApiEndpoint
+      - ""
+
+  HlsEndpoint:
+    Value: !If
+      - DeployHlsApi
+      - !GetAtt HlsApiStack.Outputs.ApiEndpoint
+      - ""
+
+  MediaLiveEndpoint:
+    Value: !If
+      - DeployIngestMediaLive
+      - !GetAtt IngestMediaLiveStack.Outputs.ApiEndpoint
+      - ""
+
+  MediaLiveStartArn:
+    Value: !If
+      - DeployIngestMediaLive
+      - !GetAtt IngestMediaLiveStack.Outputs.StartArn
+      - ""
+
+  MediaLiveStopArn:
+    Value: !If
+      - DeployIngestMediaLive
+      - !GetAtt IngestMediaLiveStack.Outputs.StopArn
+      - ""
+
+  MediaConvertEndpoint:
+    Value: !If
+      - DeployIngestMediaConvert
+      - !GetAtt IngestMediaConvertStack.Outputs.ApiEndpoint
+      - ""
+
+  MediaConvertBucketName:
+    Value: !If
+      - DeployIngestMediaConvert
+      - !GetAtt IngestMediaConvertStack.Outputs.BucketName
+      - ""

@@ -1,0 +1,90 @@
+Comment: |
+  Sample input:
+    {
+      "Id": "ffbc5625-138d-48f5-8ea9-911233806beb",
+      "ChannelId": "3251670",
+      "Label": "Step Test 1"
+    }
+StartAt: CreateFlows
+States:
+  CreateFlows:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Parameters:
+      FunctionName: ${FlowsFunctionArn}
+      Payload:
+        Id.$: $.Id
+        ChannelId.$: $.ChannelId
+        Label.$: $.Label
+    ResultSelector:
+      Parameters.$: $.Payload.parameters
+    ResultPath: $.Flows
+    Next: LoopParameters
+  LoopParameters:
+    Type: Map
+    ItemsPath: $.Flows.Parameters
+    ItemSelector:
+      SourceId.$: $.Id
+      ChannelId.$: $.ChannelId
+      Index.$: $$.Map.Item.Index
+      Data.$: $$.Map.Item.Value
+    ItemProcessor:
+      ProcessorConfig:
+        Mode: INLINE
+      StartAt: PutPolicy
+      States:
+        PutPolicy:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:iam:putRolePolicy
+          Parameters:
+            RoleName: ${IngestionFunctionRoleName}
+            PolicyName.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+            PolicyDocument.$: States.Format('\{"Version":"2012-10-17","Statement":[\{"Effect":"Allow","Action":"s3:GetObject","Resource":"arn:aws:s3:::{}/*"\}]\}', $.Data.bucket)
+          ResultPath: null
+          Next: PutParameter
+        PutParameter:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:ssm:putParameter
+          Parameters:
+            Type: String
+            Name.$: States.Format('/{}/{}', $.Data.bucket, $.Data.prefix)
+            Value.$: States.JsonToString($.Data.value)
+          ResultPath: null
+          Next: PutRule
+        PutRule:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:putRule
+          Parameters:
+            Name.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+            State: ENABLED
+            EventPattern.$: States.Format('\{"detail-type":["Object Created"],"source":["aws.s3"],"detail":\{"bucket":\{"name":["{}"]\},"object":\{"key":[\{"prefix":"{}_"\}]\}\}\}', $.Data.bucket, $.Data.prefix)
+          ResultPath: $.PutRule
+          Next: AddPermission
+        AddPermission:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:lambda:addPermission
+          Parameters:
+            StatementId.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+            Action: lambda:InvokeFunction
+            FunctionName: ${IngestionFunctionArn}
+            Principal: events.amazonaws.com
+            SourceArn.$: $.PutRule.RuleArn
+          ResultPath: null
+          Next: PutTarget
+        PutTarget:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:putTargets
+          Parameters:
+            Rule.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+            Targets:
+              - Id: TAMS-Ingestion
+                Arn: ${IngestionFunctionArn}
+          ResultPath: null
+          Next: Output
+        Output:
+          Type: Pass
+          Parameters:
+            bucket.$: $.Data.bucket
+            prefix.$: $.Data.prefix
+          End: true
+    End: true

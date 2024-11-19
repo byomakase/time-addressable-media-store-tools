@@ -1,0 +1,67 @@
+Comment: |
+  Sample input:
+    {
+      "SourceId": "5eda0d01-ccdc-4cb4-80e4-9f29fc553e4d"
+      "ChannelId": "3251670",
+      "Parameters": [
+        {
+          "bucket":"409650071325-eu-west-2",
+          "prefix":"hls/testing/index"
+        }
+      ]
+    }
+StartAt: LoopParameters
+States:
+  LoopParameters:
+    Type: Map
+    ItemsPath: $.Parameters
+    ItemSelector:
+      SourceId.$: $.SourceId
+      ChannelId.$: $.ChannelId
+      Index.$: $$.Map.Item.Index
+      Data.$: $$.Map.Item.Value
+    ItemProcessor:
+      ProcessorConfig:
+        Mode: INLINE
+      StartAt: RemoveTarget
+      States:
+        RemoveTarget:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:removeTargets
+          Parameters:
+            Rule.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+            Ids:
+              - TAMS-Ingestion
+          ResultPath: null
+          Next: RemovePermission
+        RemovePermission:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:lambda:removePermission
+          Parameters:
+            StatementId.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+            FunctionName: ${IngestionFunctionArn}
+          ResultPath: null
+          Next: DeleteRule
+        DeleteRule:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:eventbridge:deleteRule
+          Parameters:
+            Name.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+          ResultPath: null
+          Next: DeleteParameter
+        DeleteParameter:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:ssm:deleteParameter
+          Parameters:
+            Name.$: States.Format('/{}/{}', $.Data.bucket, $.Data.prefix)
+          ResultPath: null
+          Next: DeletePolicy
+        DeletePolicy:
+          Type: Task
+          Resource: arn:aws:states:::aws-sdk:iam:deleteRolePolicy
+          Parameters:
+            RoleName: ${IngestionFunctionRoleName}
+            PolicyName.$: States.Format('{}-{}-{}', $.ChannelId, $.SourceId, $.Index)
+          ResultPath: null
+          End: True
+    End: true

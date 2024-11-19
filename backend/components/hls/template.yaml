@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  UserPoolId:
+    Type: String
+
+  TAMSApiEndpoint:
+    Type: String
+
+  UserPoolClientId:
+    Type: String
+
+  TokenUrl:
+    Type: String
+
+  FlowSegmentsTable:
+    Type: String
+
+  AuthRole:
+    Type: String
+
+  OpenIdAuthLayerArn:
+    Type: String
+
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Tracing: Active
+    Timeout: 30
+    MemorySize: 128
+    Handler: app.lambda_handler
+    Runtime: python3.12
+    Architectures:
+      - arm64
+
+  Api:
+    EndpointConfiguration:
+      Type: REGIONAL
+    TracingEnabled: true
+    MethodSettings:
+      - ResourcePath: /*
+        HttpMethod: '*'
+        DataTraceEnabled: True
+        LoggingLevel: INFO
+
+Resources:
+  AuthRolePolicyHls:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !Ref AuthRole
+      PolicyName: HlsApi
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt ApiHlsFunction.Arn
+
+  Api:
+
+    # checkov:skip=CKV_AWS_73
+    # checkov:skip=CKV_AWS_76
+    # checkov:skip=CKV_AWS_80
+    # checkov:skip=CKV_AWS_120
+    Type: AWS::Serverless::Api
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - W1028
+    Properties:
+      OpenApiVersion: 3.0.1
+      StageName: Prod
+      Cors:
+        AllowMethods: '''*'''
+        AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        AllowOrigin: '''*'''
+      AlwaysDeploy: True
+
+  ApiHlsFunction:
+
+    # checkov:skip=CKV_AWS_115
+    # checkov:skip=CKV_AWS_116
+    # checkov:skip=CKV_AWS_117
+    # checkov:skip=CKV_AWS_173
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+    Properties:
+      CodeUri: functions/api-hls/
+      Layers:
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2-Arm64:69
+        - !Ref OpenIdAuthLayerArn
+      Environment:
+        Variables:
+          TAMS_ENDPOINT: !Ref TAMSApiEndpoint
+          TOKEN_URL: !Ref TokenUrl
+          USER_POOL_ID: !Ref UserPoolId
+          CLIENT_ID: !Ref UserPoolClientId
+          SEGMENTS_TABLE: !Ref FlowSegmentsTable
+          DEFAULT_HLS_SEGMENTS: 150
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:DescribeUserPoolClient
+              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${FlowSegmentsTable}
+      Events:
+        getSourceHls:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /hls/sources/{sourceId}/output.m3u8
+            Method: get
+        getFlowHls:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /hls/flows/{flowId}/output.m3u8
+            Method: get
+
+Outputs:
+  ApiEndpoint:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Api.Stage}
