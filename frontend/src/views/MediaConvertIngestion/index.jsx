@@ -88,7 +88,6 @@ const MediaConvertIngestion = () => {
 
   return (
     <Table
-      // nosemgrp: react-props-spreading
       {...collectionProps}
       isItemDisabled={(item) => !item.Valid || loading}
       variant="borderless"
@@ -99,9 +98,7 @@ const MediaConvertIngestion = () => {
       columnDefinitions={columnDefinitions}
       columnDisplay={preferences.contentDisplay}
       items={items}
-      // nosemgrp: react-props-spreading
       pagination={<Pagination {...paginationProps} />}
-      // nosemgrp: react-props-spreading
       filter={<TextFilter {...filterProps} />}
     />
   );

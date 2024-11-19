@@ -96,10 +96,10 @@ def get_collection_hls(flows):
 
 
 @tracer.capture_method(capture_response=False)
-def get_segment_count(flow_id, timerange_start):
+def get_segment_count(flow_id, timerange_end):
     query = segments_table.query(
         KeyConditionExpression=And(
-            Key("flow_id").eq(flow_id), Key("timerange_start").lte(timerange_start)
+            Key("flow_id").eq(flow_id), Key("timerange_end").lte(timerange_end)
         ),
         Select="COUNT",
     )
@@ -148,7 +148,6 @@ def get_flow_hls(flowId: str):
                 if hls_segment_count != float("inf")
                 else ""
             )
-            # nosemgrp: ssrf-requests
             get_segments = requests.get(
                 f"{endpoint}/flows/{flowId}/segments?reverse_order=true{limit_query}",
                 headers={
@@ -159,7 +158,6 @@ def get_flow_hls(flowId: str):
             get_segments.raise_for_status()
             segments = get_segments.json()
             while "next" in get_segments.links and len(segments) < hls_segment_count:
-                # nosemgrp: ssrf-requests
                 get_segments = requests.get(
                     get_segments.links["next"]["url"],
                     headers={
@@ -177,31 +175,23 @@ def get_flow_hls(flowId: str):
                 )
             ][::-1]
             media_sequence = 1
-            first_segment_start_secs = int(
-                hls_segments[0]["timerange"].split(":")[0][1:]
-            )
-            first_segment_start_nanosecs = int(
-                hls_segments[0]["timerange"].split("_")[0].split(":")[-1]
-            )
-            first_segment_start = first_segment_start_secs + (
-                first_segment_start_nanosecs / float(1000000000)
-            )
+            first_segment_timestamp = TimeRange.from_str(hls_segments[0]["timerange"])
+            target_duration = (
+                first_segment_timestamp.length.to_unix_float()
+            )  # Assuming target duration from the first segment only.
             if flow_ingesting:
                 if hls_segment_length > 0:
                     media_sequence = int(
-                        (first_segment_start_secs - flow_created_epoch)
+                        (first_segment_timestamp.start.to_float() - flow_created_epoch)
                         / hls_segment_length
                     )
                 else:
                     media_sequence = get_segment_count(
-                        flowId, first_segment_start_secs * 1000000000
+                        flowId, first_segment_timestamp.end.to_nanosec()
                     )
-            program_date_time = datetime.fromtimestamp(first_segment_start).strftime(
-                "%Y-%m-%dT%H:%M:%S.%f"
-            )
-            target_duration = TimeRange.from_str(
-                hls_segments[0]["timerange"]
-            ).length.to_unix_float()  # Assuming target duration from the first segment only.
+            program_date_time = datetime.fromtimestamp(
+                first_segment_timestamp.start.to_float()
+            ).strftime("%Y-%m-%dT%H:%M:%S.%f")
             m3u8_content = "#EXTM3U\n"
             m3u8_content += "#EXT-X-VERSION:3\n"
             m3u8_content += f"#EXT-X-TARGETDURATION:{target_duration}\n"
@@ -213,7 +203,7 @@ def get_flow_hls(flowId: str):
                 presigned_urls = [
                     get_url["url"]
                     for get_url in segment["get_urls"]
-                    if get_url["label"] == "s3_presigned"
+                    if "s3.presigned" in get_url["label"]
                 ]
                 segment_duration = TimeRange.from_str(
                     segment["timerange"]

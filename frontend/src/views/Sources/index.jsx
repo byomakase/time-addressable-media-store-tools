@@ -151,7 +151,6 @@ const Sources = () => {
 
   return (
     <Table
-      // nosemgrp: react-props-spreading
       {...collectionProps}
       variant="borderless"
       resizableColumns
@@ -177,13 +176,10 @@ const Sources = () => {
       columnDefinitions={columnDefinitions}
       columnDisplay={preferences.contentDisplay}
       items={items}
-      // nosemgrp: react-props-spreading
       pagination={<Pagination {...paginationProps} />}
-      // nosemgrp: react-props-spreading
       filter={<TextFilter {...filterProps} />}
       preferences={
         <CollectionPreferences
-          // nosemgrp: react-props-spreading
           {...collectionPreferencesProps}
           preferences={preferences}
           onConfirm={({ detail }) => setPreferences(detail)}

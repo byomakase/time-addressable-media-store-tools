@@ -307,7 +307,6 @@ const MediaLiveIngestion = () => {
   return (
     <>
       <Table
-        // nosemgrp: react-props-spreading
         {...collectionProps}
         isItemDisabled={(item) =>
           !item.Valid || isRunning || isStarting || isStopping
@@ -378,9 +377,7 @@ const MediaLiveIngestion = () => {
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         items={items}
-        // nosemgrp: react-props-spreading
         pagination={<Pagination {...paginationProps} />}
-        // nosemgrp: react-props-spreading
         filter={<TextFilter {...filterProps} />}
       />
       <Modal

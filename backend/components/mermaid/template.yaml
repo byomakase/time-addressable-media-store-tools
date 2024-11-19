@@ -27,7 +27,7 @@ Globals:
     Timeout: 30
     MemorySize: 128
     Handler: app.lambda_handler
-    Runtime: python3.12
+    Runtime: python3.13
     Architectures:
       - arm64
 
@@ -65,11 +65,6 @@ Resources:
               - !GetAtt ApiMermaidFunction.Arn
 
   Api:
-
-    # checkov:skip=CKV_AWS_73
-    # checkov:skip=CKV_AWS_76
-    # checkov:skip=CKV_AWS_80
-    # checkov:skip=CKV_AWS_120
     Type: AWS::Serverless::Api
     Metadata:
       cfn-lint:
@@ -86,11 +81,6 @@ Resources:
       AlwaysDeploy: True
 
   ApiMermaidFunction:
-
-    # checkov:skip=CKV_AWS_115
-    # checkov:skip=CKV_AWS_116
-    # checkov:skip=CKV_AWS_117
-    # checkov:skip=CKV_AWS_173
     Type: AWS::Serverless::Function
     Metadata:
       cfn_nag:
@@ -102,7 +92,7 @@ Resources:
     Properties:
       CodeUri: functions/api-mermaid/
       Layers:
-        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2-Arm64:69
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:4
         - !Ref OpenIdAuthLayerArn
       Environment:
         Variables:
