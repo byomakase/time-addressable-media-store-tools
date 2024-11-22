@@ -53,7 +53,7 @@ The deployment will only take a short time as with all the components set to No 
 ```bash
 cd ../frontend
 npm ci
-cp env.template env.local
+cp .env.template .env.local
 ```
 
 Open the newly created `env.local` file in your preferred text editor and set the values for the non-commented out variables, leave the commented out lines for now. All the values for the variables specified in this file are provided as Outputs on the Cloudformation stack that resulted from the deployment of the infrastructure.
