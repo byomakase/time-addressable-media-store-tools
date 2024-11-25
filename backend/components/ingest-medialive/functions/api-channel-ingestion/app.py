@@ -84,9 +84,14 @@ def get_channel_info():
 
 @tracer.capture_method(capture_response=False)
 def is_eventbridge_trigger(bucket_name):
-    return "EventBridgeConfiguration" in s3.get_bucket_notification_configuration(
-        Bucket=bucket_name
-    )
+    try:
+        return "EventBridgeConfiguration" in s3.get_bucket_notification_configuration(
+            Bucket=bucket_name
+        )
+    # pylint: disable=broad-exception-caught
+    except Exception as e:
+        logger.warning(e)
+        return False
 
 
 @app.get("/channel-ingestion")
