@@ -32,7 +32,6 @@ The first command will build the source of your application. The second command 
 
 - **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
 - **AWS Region**: The AWS region you want to deploy your app to.
-- **DeployMermaidApi**: Defines whether to deploy the Mermaid component. **Leave the default value of `No`.**
 - **DeployHlsApi**: Defines whether to deploy the HLS component. **Leave the default value of `No`.**
 - **DeployIngestMediaLive**: Defines whether to deploy the MediaLive component. **Leave the default value of `No`.**
 - **DeployIngestMediaConvert**: Defines whether to deploy the MediaConvert component. **Leave the default value of `No`.**
@@ -87,12 +86,6 @@ Then take the contents of the `dist` subfolder and place this on the web server 
 ## Usage
 
 It the initial state thw Web App will just have a simple interface that allows you to browse and view the basic data held in your TAMS store. 4 optional components can be deployed to the infrastructure to add functionality to this solution. The deployment of these components is expected to be done from the AWS Cloudformation Console. Changes should therefore be made by updating the stack parameters for the CloudFormation Stack created for the infrastructure.
-
-### Mermaid Diagrams
-
-To deploy this component perform an update on the Cloudformation Stack and change the value of `Deploy Mermaid Diagram Endpoint?` to Yes.
-
-Once the update is complete. Review the Outputs section of the Stack and copy the value of the `MermaidEndpoint`. Edit the `env.local` file to uncomment the appropriate line and set its value and save the changes to the file. If you are running locally in Dev mode the change will be picked up automatically. If you build and deployed the App to a web server you will need to perform the build and deploy steps again.
 
 ### HLS API
 

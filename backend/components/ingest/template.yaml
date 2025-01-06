@@ -27,7 +27,7 @@ Globals:
     Timeout: 30
     MemorySize: 128
     Handler: app.lambda_handler
-    Runtime: python3.12
+    Runtime: python3.13
     Architectures:
       - arm64
 
@@ -54,7 +54,7 @@ Resources:
       RetentionPolicy: Delete
       ContentUri: layers/mediainfo
       CompatibleRuntimes:
-        - python3.12
+        - python3.13
       CompatibleArchitectures:
         - arm64
 

@@ -2,7 +2,6 @@ import {
   AWS_HLS_ENDPOINT,
   AWS_IDENTITY_POOL_ID,
   AWS_MC_ENDPOINT,
-  AWS_MERMAID_ENDPOINT,
   AWS_ML_ENDPOINT,
   AWS_REGION,
   AWS_TAMS_ENDPOINT,
@@ -46,10 +45,6 @@ Amplify.configure({
         endpoint: AWS_HLS_ENDPOINT,
         region: AWS_REGION,
       },
-      Mermaid: {
-        endpoint: AWS_MERMAID_ENDPOINT,
-        region: AWS_REGION,
-      },
       MediaLive: {
         endpoint: AWS_ML_ENDPOINT,
         region: AWS_REGION,
@@ -78,17 +73,15 @@ const App = () => {
             <Route index element={<Flows />} />
             <Route path=":flowId" element={<Flow />} />
           </Route>
+          <Route path="diagram/:type/:id" element={<Diagram />} />
+          {AWS_HLS_ENDPOINT && (
+            <Route path="player/:type/:id" element={<HlsPlayer />} />
+          )}
           {AWS_ML_ENDPOINT && (
             <Route path="channels" element={<MediaLiveIngestion />} />
           )}
           {AWS_MC_ENDPOINT && (
             <Route path="jobs" element={<MediaConvertIngestion />} />
-          )}
-          {AWS_HLS_ENDPOINT && (
-            <Route path="player/:type/:id" element={<HlsPlayer />} />
-          )}
-          {AWS_MERMAID_ENDPOINT && (
-            <Route path="diagram/:type/:id" element={<Diagram />} />
           )}
         </Route>
       </Routes>

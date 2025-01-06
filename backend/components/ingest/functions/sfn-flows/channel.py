@@ -183,7 +183,7 @@ class Channel:
                             multi_flow = {
                                 "id": str(uuid.uuid4()),
                                 "label": label,
-                                "description": f"{self.dict["Name"]}: {output_group_name} - {output_name}",
+                                "description": f'{self.dict["Name"]}: {output_group_name} - {output_name}',
                                 "format": flow_format,
                                 "container": "video/mp2t",
                                 "flow_collection": [],
@@ -198,7 +198,7 @@ class Channel:
                             audio_flow = get_audio_flow(
                                 {
                                     "label": label,
-                                    "description": f"{self.dict["Name"]}: {output_group_name} - {output_name}",
+                                    "description": f'{self.dict["Name"]}: {output_group_name} - {output_name}',
                                 },
                                 output,
                             )
@@ -219,7 +219,7 @@ class Channel:
                             video_flow = get_video_flow(
                                 {
                                     "label": label,
-                                    "description": f"{self.dict["Name"]}: {output_group_name} - {output_name}",
+                                    "description": f'{self.dict["Name"]}: {output_group_name} - {output_name}',
                                 },
                                 output,
                             )

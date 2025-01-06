@@ -1,4 +1,3 @@
-import { AWS_HLS_ENDPOINT, AWS_MERMAID_ENDPOINT } from "@/constants";
 import {
   Box,
   Button,
@@ -9,6 +8,7 @@ import {
 } from "@cloudscape-design/components";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { AWS_HLS_ENDPOINT } from "@/constants";
 import CollectedBy from "@/components/CollectedBy";
 import Collection from "@/components/Collection";
 import EntityDetails from "@/components/EntityDetails";
@@ -42,15 +42,13 @@ const Flow = () => {
                 View HLS
               </Button>
             )}
-            {AWS_MERMAID_ENDPOINT && (
-              <Button
-                href={`/diagram/flows/${flowId}`}
-                variant="inline-link"
-                onFollow={followLink}
-              >
-                View Diagram
-              </Button>
-            )}
+            <Button
+              href={`/diagram/flows/${flowId}`}
+              variant="inline-link"
+              onFollow={followLink}
+            >
+              View Diagram
+            </Button>
           </SpaceBetween>
         </Header>
         <EntityDetails entity={flow} />
@@ -68,13 +66,7 @@ const Flow = () => {
             {
               label: "Tags",
               id: "tags",
-              content: (
-                <Tags
-                  id={flowId}
-                  entityType="flows"
-                  tags={flow.tags}
-                />
-              ),
+              content: <Tags id={flowId} entityType="flows" tags={flow.tags} />,
             },
             {
               label: "Flow collections",

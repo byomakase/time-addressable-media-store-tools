@@ -6,7 +6,6 @@ Metadata:
       - Label:
           default: Components
         Parameters:
-          - DeployMermaidApi
           - DeployHlsApi
           - DeployIngestMediaLive
           - DeployIngestMediaConvert
@@ -20,8 +19,6 @@ Metadata:
           - FlowSegmentsTable
           - AuthRole
     ParameterLabels:
-      DeployMermaidApi:
-        default: Deploy Mermaid Diagram Endpoint?
       DeployHlsApi:
         default: Deploy HLS Endpoint?
       DeployIngestMediaLive:
@@ -42,13 +39,6 @@ Metadata:
         default: TAMS API Cognito Auth Role
 
 Parameters:
-  DeployMermaidApi:
-    Type: String
-    AllowedValues:
-      - "Yes"
-      - "No"
-    Default: "No"
-
   DeployHlsApi:
     Type: String
     AllowedValues:
@@ -89,15 +79,13 @@ Parameters:
     Type: String
 
 Conditions:
-  DeployMermaidApi: !Equals [!Ref DeployMermaidApi, "Yes"]
-
   DeployHlsApi: !Equals [!Ref DeployHlsApi, "Yes"]
 
   DeployIngestMediaLive: !Equals [!Ref DeployIngestMediaLive, "Yes"]
 
   DeployIngestMediaConvert: !Equals [!Ref DeployIngestMediaConvert, "Yes"]
 
-  DeployApi: !Or [!Condition DeployMermaidApi, !Condition DeployHlsApi, !Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
+  DeployApi: !Or [!Condition DeployHlsApi, !Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
 
   DeployIngest: !Or [!Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
 
@@ -140,19 +128,6 @@ Resources:
       CompatibleArchitectures:
         - arm64
     Condition: DeployApi
-
-  MermaidApiStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: components/mermaid/template.yaml
-      Parameters:
-        UserPoolId: !Ref UserPoolId
-        TAMSApiEndpoint: !Ref TAMSApiEndpoint
-        UserPoolClientId: !Ref UserPoolClientId
-        TokenUrl: !Ref TokenUrl
-        AuthRole: !Ref AuthRole
-        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
-    Condition: DeployMermaidApi
 
   HlsApiStack:
     Type: AWS::CloudFormation::Stack
@@ -206,12 +181,6 @@ Resources:
     Condition: DeployIngestMediaConvert
 
 Outputs:
-  MermaidEndpoint:
-    Value: !If
-      - DeployMermaidApi
-      - !GetAtt MermaidApiStack.Outputs.ApiEndpoint
-      - ""
-
   HlsEndpoint:
     Value: !If
       - DeployHlsApi
