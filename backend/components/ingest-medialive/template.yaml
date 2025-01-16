@@ -16,6 +16,9 @@ Parameters:
   S3IngestionFunctionArn:
     Type: String
 
+  ParentStackName:
+    Type: String
+
 Transform: AWS::Serverless-2016-10-31
 
 Globals:
@@ -149,7 +152,7 @@ Resources:
           - id: W84
             reason: Encryption no required.
     Properties:
-      LogGroupName: /aws/vendedlogs/states/tams-tools-medialive-ingest-start
+      LogGroupName: !Sub /aws/vendedlogs/states/${ParentStackName}-medialive-ingest-start
       RetentionInDays: 30
 
   StopIngestionLogGroup:
@@ -160,7 +163,7 @@ Resources:
           - id: W84
             reason: Encryption no required.
     Properties:
-      LogGroupName: /aws/vendedlogs/states/tams-tools-medialive-ingest-stop
+      LogGroupName: !Sub /aws/vendedlogs/states/${ParentStackName}-medialive-ingest-stop
       RetentionInDays: 30
 
   MediaLiveStartIngestion:

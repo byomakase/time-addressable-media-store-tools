@@ -166,6 +166,7 @@ Resources:
         SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
         S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
         S3IngestionFunctionArn: !GetAtt IngestStack.Outputs.S3IngestionFunctionArn
+        ParentStackName: !Ref AWS::StackName
     Condition: DeployIngestMediaLive
 
   IngestMediaConvertStack:
