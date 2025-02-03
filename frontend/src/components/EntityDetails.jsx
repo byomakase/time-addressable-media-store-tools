@@ -1,21 +1,9 @@
 import { ColumnLayout, SpaceBetween } from "@cloudscape-design/components";
 
-import { DATE_FORMAT } from "@/constants";
-import { DateTime } from "luxon";
 import { Link } from "react-router-dom";
 import ValueWithLabel from "@/components/ValueWithLabel";
 import chunkArray from "@/utils/chunkArray";
-
-const parseTimerange = (timerange) => {
-  const [start, end] = timerange
-    .substring(1)
-    .split("_")
-    .map((value) => DateTime.fromSeconds(parseInt(value.split(":")[0], 10)));
-  return {
-    start: start.toLocaleString(DATE_FORMAT),
-    end: end.toLocaleString(DATE_FORMAT),
-  };
-};
+import parseTimerange from "@/utils/parseTimerange";
 
 const EntityDetails = ({ entity }) => {
   const keyValues = entity
