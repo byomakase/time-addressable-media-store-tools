@@ -13,9 +13,6 @@ Parameters:
   TokenUrl:
     Type: String
 
-  FlowSegmentsTable:
-    Type: String
-
   AuthRole:
     Type: String
 
@@ -95,7 +92,6 @@ Resources:
           TOKEN_URL: !Ref TokenUrl
           USER_POOL_ID: !Ref UserPoolId
           CLIENT_ID: !Ref UserPoolClientId
-          SEGMENTS_TABLE: !Ref FlowSegmentsTable
           DEFAULT_HLS_SEGMENTS: 150
       Policies:
         - Version: "2012-10-17"
@@ -104,11 +100,6 @@ Resources:
               Action:
                 - cognito-idp:DescribeUserPoolClient
               Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
-            - Effect: Allow
-              Action:
-                - dynamodb:Query
-              Resource:
-                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${FlowSegmentsTable}
       Events:
         getSourceHls:
           Type: Api

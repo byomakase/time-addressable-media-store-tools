@@ -3,7 +3,6 @@ from collections import deque
 from datetime import datetime
 from http import HTTPStatus
 
-import boto3
 import requests
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.event_handler import (
@@ -14,7 +13,6 @@ from aws_lambda_powertools.event_handler import (
 from aws_lambda_powertools.event_handler.exceptions import InternalServerError
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
-from boto3.dynamodb.conditions import And, Key
 from mediatimestamp.immutable import TimeRange
 from openid_auth import Credentials
 
@@ -22,8 +20,6 @@ tracer = Tracer()
 logger = Logger()
 app = APIGatewayRestResolver(cors=CORSConfig())
 
-dynamodb = boto3.resource("dynamodb")
-segments_table = dynamodb.Table(os.environ["SEGMENTS_TABLE"])
 endpoint = os.environ["TAMS_ENDPOINT"]
 creds = Credentials(
     token_url=os.environ["TOKEN_URL"],
@@ -96,23 +92,27 @@ def get_collection_hls(flows):
 
 
 @tracer.capture_method(capture_response=False)
-def get_segment_count(flow_id, timerange_end):
-    query = segments_table.query(
-        KeyConditionExpression=And(
-            Key("flow_id").eq(flow_id), Key("timerange_end").lte(timerange_end)
-        ),
-        Select="COUNT",
+def get_segment_count(flow_id, timerange):
+    get = requests.get(
+        f'{endpoint}/flows/{flow_id}/segments?timerange=_{str(timerange).rsplit("_", maxsplit=1)[-1]}&accept_get_urls=&limit=300',
+        headers={
+            "Authorization": f"Bearer {creds.token()}",
+        },
+        timeout=30,
     )
-    segment_count = query["Count"]
-    while "LastEvaluatedKey" in query:
-        query = segments_table.query(
-            KeyConditionExpression=And(
-                Key("flow_id").eq(flow_id), Key("timerange_end").lte(timerange_end)
-            ),
-            Select="COUNT",
-            ExclusiveStartKey=query["LastEvaluatedKey"],
+    get.raise_for_status()
+    segment_count = int(get.headers["X-Paging-Count"])
+    while "next" in get.links:
+        next_url = get.links["next"]["url"]
+        get = requests.get(
+            next_url,
+            headers={
+                "Authorization": f"Bearer {creds.token()}",
+            },
+            timeout=30,
         )
-        segment_count += query["Count"]
+        get.raise_for_status()
+        segment_count += int(get.headers["X-Paging-Count"])
     return segment_count
 
 
@@ -196,9 +196,7 @@ def get_flow_hls(flowId: str):
                         / hls_segment_length
                     )
                 else:
-                    media_sequence = get_segment_count(
-                        flowId, first_segment_timestamp.end.to_nanosec()
-                    )
+                    media_sequence = get_segment_count(flowId, first_segment_timestamp)
             program_date_time = datetime.fromtimestamp(
                 first_segment_timestamp.start.to_float()
             ).strftime("%Y-%m-%dT%H:%M:%S.%f")

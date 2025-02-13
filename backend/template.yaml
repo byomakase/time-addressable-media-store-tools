@@ -16,7 +16,6 @@ Metadata:
           - TAMSApiEndpoint
           - UserPoolClientId
           - TokenUrl
-          - FlowSegmentsTable
           - AuthRole
     ParameterLabels:
       DeployHlsApi:
@@ -33,8 +32,6 @@ Metadata:
         default: TAMS API Cognito User Pool Client Id
       TokenUrl:
         default: TAMS API Cognito User Pool Token Url
-      FlowSegmentsTable:
-        default: TAMS API Flow Segments DynamoDb Table
       AuthRole:
         default: TAMS API Cognito Auth Role
 
@@ -70,9 +67,6 @@ Parameters:
     Type: String
 
   TokenUrl:
-    Type: String
-
-  FlowSegmentsTable:
     Type: String
 
   AuthRole:
@@ -138,7 +132,6 @@ Resources:
         TAMSApiEndpoint: !Ref TAMSApiEndpoint
         UserPoolClientId: !Ref UserPoolClientId
         TokenUrl: !Ref TokenUrl
-        FlowSegmentsTable: !Ref FlowSegmentsTable
         AuthRole: !Ref AuthRole
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
     Condition: DeployHlsApi
