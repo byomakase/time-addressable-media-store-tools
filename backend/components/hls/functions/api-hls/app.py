@@ -103,7 +103,17 @@ def get_segment_count(flow_id, timerange_end):
         ),
         Select="COUNT",
     )
-    return query["Count"]
+    segment_count = query["Count"]
+    while "LastEvaluatedKey" in query:
+        query = segments_table.query(
+            KeyConditionExpression=And(
+                Key("flow_id").eq(flow_id), Key("timerange_end").lte(timerange_end)
+            ),
+            Select="COUNT",
+            ExclusiveStartKey=query["LastEvaluatedKey"],
+        )
+        segment_count += query["Count"]
+    return segment_count
 
 
 @app.get("/hls/sources/<sourceId>/output.m3u8")
