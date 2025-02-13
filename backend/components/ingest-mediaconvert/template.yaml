@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Parameters:
-  AuthRole:
+  AuthRoleName:
     Type: String
 
   SfnFlowsFunctionRole:
@@ -45,7 +45,7 @@ Resources:
   AuthRolePolicyMediaConvert:
     Type: AWS::IAM::RolePolicy
     Properties:
-      RoleName: !Ref AuthRole
+      RoleName: !Ref AuthRoleName
       PolicyName: MediaConvertIngest
       PolicyDocument:
         Version: "2012-10-17"

@@ -4,7 +4,7 @@ Parameters:
   UserPoolId:
     Type: String
 
-  TAMSApiEndpoint:
+  ApiEndpoint:
     Type: String
 
   UserPoolClientId:
@@ -13,7 +13,7 @@ Parameters:
   TokenUrl:
     Type: String
 
-  AuthRole:
+  AuthRoleName:
     Type: String
 
   OpenIdAuthLayerArn:
@@ -35,7 +35,7 @@ Resources:
   AuthRolePolicyIngest:
     Type: AWS::IAM::RolePolicy
     Properties:
-      RoleName: !Ref AuthRole
+      RoleName: !Ref AuthRoleName
       PolicyName: Ingest
       PolicyDocument:
         Version: "2012-10-17"
@@ -78,7 +78,7 @@ Resources:
         - !Ref OpenIdAuthLayerArn
       Environment:
         Variables:
-          TAMS_ENDPOINT: !Ref TAMSApiEndpoint
+          TAMS_ENDPOINT: !Ref ApiEndpoint
           TOKEN_URL: !Ref TokenUrl
           USER_POOL_ID: !Ref UserPoolId
           CLIENT_ID: !Ref UserPoolClientId
@@ -116,7 +116,7 @@ Resources:
         - !Ref OpenIdAuthLayerArn
       Environment:
         Variables:
-          TAMS_ENDPOINT: !Ref TAMSApiEndpoint
+          TAMS_ENDPOINT: !Ref ApiEndpoint
           TOKEN_URL: !Ref TokenUrl
           USER_POOL_ID: !Ref UserPoolId
           CLIENT_ID: !Ref UserPoolClientId

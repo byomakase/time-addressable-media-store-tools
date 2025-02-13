@@ -13,10 +13,10 @@ Metadata:
           default: Configuration
         Parameters:
           - UserPoolId
-          - TAMSApiEndpoint
+          - ApiEndpoint
           - UserPoolClientId
           - TokenUrl
-          - AuthRole
+          - AuthRoleName
     ParameterLabels:
       DeployHlsApi:
         default: Deploy HLS Endpoint?
@@ -26,13 +26,13 @@ Metadata:
         default: Deploy MediaConvert Job ingest?
       UserPoolId:
         default: TAMS API Cognito User Pool Id
-      TAMSApiEndpoint:
+      ApiEndpoint:
         default: TAMS API Endpoint
       UserPoolClientId:
         default: TAMS API Cognito User Pool Client Id
       TokenUrl:
         default: TAMS API Cognito User Pool Token Url
-      AuthRole:
+      AuthRoleName:
         default: TAMS API Cognito Auth Role
 
 Parameters:
@@ -60,7 +60,7 @@ Parameters:
   UserPoolId:
     Type: String
 
-  TAMSApiEndpoint:
+  ApiEndpoint:
     Type: String
 
   UserPoolClientId:
@@ -69,7 +69,7 @@ Parameters:
   TokenUrl:
     Type: String
 
-  AuthRole:
+  AuthRoleName:
     Type: String
 
 Conditions:
@@ -129,10 +129,10 @@ Resources:
       TemplateURL: components/hls/template.yaml
       Parameters:
         UserPoolId: !Ref UserPoolId
-        TAMSApiEndpoint: !Ref TAMSApiEndpoint
+        ApiEndpoint: !Ref ApiEndpoint
         UserPoolClientId: !Ref UserPoolClientId
         TokenUrl: !Ref TokenUrl
-        AuthRole: !Ref AuthRole
+        AuthRoleName: !Ref AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
     Condition: DeployHlsApi
 
@@ -142,10 +142,10 @@ Resources:
       TemplateURL: components/ingest/template.yaml
       Parameters:
         UserPoolId: !Ref UserPoolId
-        TAMSApiEndpoint: !Ref TAMSApiEndpoint
+        ApiEndpoint: !Ref ApiEndpoint
         UserPoolClientId: !Ref UserPoolClientId
         TokenUrl: !Ref TokenUrl
-        AuthRole: !Ref AuthRole
+        AuthRoleName: !Ref AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
     Condition: DeployIngest
 
@@ -154,7 +154,7 @@ Resources:
     Properties:
       TemplateURL: components/ingest-medialive/template.yaml
       Parameters:
-        AuthRole: !Ref AuthRole
+        AuthRoleName: !Ref AuthRoleName
         SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
         SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
         S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
@@ -167,7 +167,7 @@ Resources:
     Properties:
       TemplateURL: components/ingest-mediaconvert/template.yaml
       Parameters:
-        AuthRole: !Ref AuthRole
+        AuthRoleName: !Ref AuthRoleName
         SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
         SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
         S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
@@ -181,25 +181,25 @@ Outputs:
       - !GetAtt HlsApiStack.Outputs.ApiEndpoint
       - ""
 
-  MediaLiveEndpoint:
+  MlEndpoint:
     Value: !If
       - DeployIngestMediaLive
       - !GetAtt IngestMediaLiveStack.Outputs.ApiEndpoint
       - ""
 
-  MediaLiveStartArn:
+  MlStartArn:
     Value: !If
       - DeployIngestMediaLive
       - !GetAtt IngestMediaLiveStack.Outputs.StartArn
       - ""
 
-  MediaLiveStopArn:
+  MlStopArn:
     Value: !If
       - DeployIngestMediaLive
       - !GetAtt IngestMediaLiveStack.Outputs.StopArn
       - ""
 
-  MediaConvertEndpoint:
+  McEndpoint:
     Value: !If
       - DeployIngestMediaConvert
       - !GetAtt IngestMediaConvertStack.Outputs.ApiEndpoint

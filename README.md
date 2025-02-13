@@ -61,7 +61,7 @@ Open the newly created `env.local` file in your preferred text editor and set th
 - VITE_APP_AWS_USER_POOL_ID
 - VITE_APP_AWS_USER_POOL_CLIENT_WEB_ID
 - VITE_APP_AWS_IDENTITY_POOL_ID
-- VITE_APP_AWS_TAMS_ENDPOINT
+- VITE_APP_AWS_API_ENDPOINT
 
 Once you have set these values save the changes to the file. You now have 2 choicess:
 
