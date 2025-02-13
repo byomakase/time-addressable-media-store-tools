@@ -5,7 +5,7 @@ export const useSegments = (flowId) => {
   const { get } = useApi();
   const { data, mutate, error, isLoading, isValidating } = useSWR(
     `/flows/${flowId}/segments`,
-    (path) => get(`${path}?reverse_order=true`),
+    (path) => get(`${path}?accept_get_urls=&reverse_order=true`),
     {
       refreshInterval: 3000,
     }
