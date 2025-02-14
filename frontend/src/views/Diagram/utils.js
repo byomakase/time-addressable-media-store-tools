@@ -1,4 +1,5 @@
-import { nodeSize } from "./constants";
+import { formatPrecedence, nodeSize } from "./constants";
+
 import { useApi } from "@/hooks/useApi";
 
 const getEntities = async (path, graph = {}) => {
@@ -67,17 +68,9 @@ const getPositions = (entities) => {
     };
     const rows = [
         entities.filter((elem) => !elem.source_id && elem.format === "urn:x-nmos:format:multi").map((elem) => elem.id),
-        [
-            ...entities.filter((elem) => !elem.source_id && elem.format === "urn:x-nmos:format:video").map((elem) => elem.id),
-            ...entities.filter((elem) => !elem.source_id && elem.format === "urn:x-nmos:format:audio").map((elem) => elem.id),
-            ...entities.filter((elem) => !elem.source_id && elem.format === "urn:x-nmos:format:data").map((elem) => elem.id),
-        ],
+        formatPrecedence.map((format) => entities.filter((elem) => !elem.source_id && elem.format === format).map((elem) => elem.id)).flat(),
         entities.filter((elem) => elem.source_id && elem.format === "urn:x-nmos:format:multi").map((elem) => elem.id),
-        [
-            ...entities.filter((elem) => elem.source_id && elem.format === "urn:x-nmos:format:video").map((elem) => elem.id),
-            ...entities.filter((elem) => elem.source_id && elem.format === "urn:x-nmos:format:audio").map((elem) => elem.id),
-            ...entities.filter((elem) => elem.source_id && elem.format === "urn:x-nmos:format:data").map((elem) => elem.id),
-        ],
+        formatPrecedence.map((format) => entities.filter((elem) => elem.source_id && elem.format === format).map((elem) => elem.id)).flat(),
     ]
     const rowLength = Math.max(...rows.map((row) => row.length))
     return Object.fromEntries(rows.flatMap((row, y) => row.map((id, x) => ([id, { x: (nodeSize.width + nodeSpacing.horizontal) * (((rowLength - row.length) / 2) + x), y: (nodeSize.height + nodeSpacing.vertical) * y }]))))
