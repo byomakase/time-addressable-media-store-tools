@@ -214,6 +214,7 @@ def get_flow_hls(flowId: str):
             m3u8_content += f"#EXT-X-PROGRAM-DATE-TIME:{program_date_time[:-3]}+00:00\n"
             if not flow_ingesting:
                 m3u8_content += "#EXT-X-PLAYLIST-TYPE:VOD\n"
+            prev_ts_offset = ""
             for segment in hls_segments:
                 presigned_urls = [
                     get_url["url"]
@@ -223,6 +224,10 @@ def get_flow_hls(flowId: str):
                 segment_duration = TimeRange.from_str(
                     segment["timerange"]
                 ).length.to_unix_float()
+                ts_offset = segment.get("ts_offset", "")
+                if prev_ts_offset != ts_offset:
+                    m3u8_content += "#EXT-X-DISCONTINUITY\n"
+                    prev_ts_offset = ts_offset
                 m3u8_content += f"#EXTINF:{segment_duration},\n"
                 m3u8_content += f"{presigned_urls[0]}\n"
             if not flow_ingesting:
