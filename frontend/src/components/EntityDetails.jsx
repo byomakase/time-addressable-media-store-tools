@@ -6,11 +6,27 @@ import chunkArray from "@/utils/chunkArray";
 import parseTimerange from "@/utils/parseTimerange";
 
 const EntityDetails = ({ entity }) => {
-  const keyValues = entity
+  const filteredEntity = entity
     ? Object.entries(entity).filter(
-        (prop) => typeof prop[1] !== "object" && prop[0] !== "timerange"
+        (prop) =>
+          ![
+            "source_collection",
+            "flow_collection",
+            "collected_by",
+            "essence_parameters",
+            "tags",
+          ].includes(prop[0])
       )
     : [];
+  // Filter out timerange so that it can be added again later to keep timerange fields together.
+  const keyValues = filteredEntity.filter(
+    (prop) => typeof prop[1] !== "object" && prop[0] !== "timerange"
+  );
+  // Add object types back in as stringify value
+  filteredEntity
+    .filter((prop) => typeof prop[1] == "object")
+    .forEach(([k, v]) => keyValues.push([k, JSON.stringify(v)]));
+  // Add human readable timerange fields back in.
   if (entity.timerange) {
     keyValues.push(["timerange", entity.timerange]);
     if (entity.timerange !== "()") {
