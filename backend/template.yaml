@@ -12,30 +12,21 @@ Metadata:
       - Label:
           default: Configuration
         Parameters:
-          - UserPoolId
-          - ApiEndpoint
-          - UserPoolClientId
-          - TokenUrl
-          - AuthRoleName
+          - ApiStackName
     ParameterLabels:
+      ApiStackName:
+        default: The name of the CloudFormation stack that Deployed the TAMS API
       DeployHlsApi:
         default: Deploy HLS Endpoint?
       DeployIngestMediaLive:
         default: Deploy MediaLive Channel ingest?
       DeployIngestMediaConvert:
         default: Deploy MediaConvert Job ingest?
-      UserPoolId:
-        default: TAMS API Cognito User Pool Id
-      ApiEndpoint:
-        default: TAMS API Endpoint
-      UserPoolClientId:
-        default: TAMS API Cognito User Pool Client Id
-      TokenUrl:
-        default: TAMS API Cognito User Pool Token Url
-      AuthRoleName:
-        default: TAMS API Cognito Auth Role
 
 Parameters:
+  ApiStackName:
+    Type: String
+
   DeployHlsApi:
     Type: String
     AllowedValues:
@@ -56,21 +47,6 @@ Parameters:
       - "Yes"
       - "No"
     Default: "No"
-
-  UserPoolId:
-    Type: String
-
-  ApiEndpoint:
-    Type: String
-
-  UserPoolClientId:
-    Type: String
-
-  TokenUrl:
-    Type: String
-
-  AuthRoleName:
-    Type: String
 
 Conditions:
   DeployHlsApi: !Equals [!Ref DeployHlsApi, "Yes"]
@@ -128,11 +104,16 @@ Resources:
     Properties:
       TemplateURL: components/hls/template.yaml
       Parameters:
-        UserPoolId: !Ref UserPoolId
-        ApiEndpoint: !Ref ApiEndpoint
-        UserPoolClientId: !Ref UserPoolClientId
-        TokenUrl: !Ref TokenUrl
-        AuthRoleName: !Ref AuthRoleName
+        UserPoolId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolId
+        ApiEndpoint: !ImportValue
+          Fn::Sub: ${ApiStackName}-ApiEndpoint
+        UserPoolClientId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolClientId
+        TokenUrl: !ImportValue
+          Fn::Sub: ${ApiStackName}-TokenUrl
+        AuthRoleName: !ImportValue
+          Fn::Sub: ${ApiStackName}-AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
     Condition: DeployHlsApi
 
@@ -141,11 +122,16 @@ Resources:
     Properties:
       TemplateURL: components/ingest/template.yaml
       Parameters:
-        UserPoolId: !Ref UserPoolId
-        ApiEndpoint: !Ref ApiEndpoint
-        UserPoolClientId: !Ref UserPoolClientId
-        TokenUrl: !Ref TokenUrl
-        AuthRoleName: !Ref AuthRoleName
+        UserPoolId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolId
+        ApiEndpoint: !ImportValue
+          Fn::Sub: ${ApiStackName}-ApiEndpoint
+        UserPoolClientId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolClientId
+        TokenUrl: !ImportValue
+          Fn::Sub: ${ApiStackName}-TokenUrl
+        AuthRoleName: !ImportValue
+          Fn::Sub: ${ApiStackName}-AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
     Condition: DeployIngest
 
@@ -154,7 +140,8 @@ Resources:
     Properties:
       TemplateURL: components/ingest-medialive/template.yaml
       Parameters:
-        AuthRoleName: !Ref AuthRoleName
+        AuthRoleName: !ImportValue
+          Fn::Sub: ${ApiStackName}-AuthRoleName
         SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
         SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
         S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
@@ -167,7 +154,8 @@ Resources:
     Properties:
       TemplateURL: components/ingest-mediaconvert/template.yaml
       Parameters:
-        AuthRoleName: !Ref AuthRoleName
+        AuthRoleName: !ImportValue
+          Fn::Sub: ${ApiStackName}-AuthRoleName
         SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
         SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
         S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole

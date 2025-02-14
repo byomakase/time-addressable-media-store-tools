@@ -12,7 +12,7 @@ const Home = () => {
   - **Sources** shows the current sources in the TAMS store. You are able to select individual items to view more details about them.
   - **Flows** shows the current flows in the TAMS store. You are able to select individual items to view more details about them.
 
-  On each of these pages there is a link at the top which will show you an HLS Player representing you chosen item or a diagram to better visualise the associated TAMS entities.
+  On each of these pages there is a link at the top which will show you an HLS Player representing your chosen item or a diagram to better visualise the associated TAMS entities.
 
   - **MediaLive Channels** shows a list of AWS Elemental MediaLive Channels. You can choose to setup (or remove) an Ingest workflow and/or start/stop the Channel.
 

@@ -2,6 +2,8 @@
 
 This solution contains a Web UI and associated tools to be used to help adoption and understanding of the AWS implementation of the [BBC TAMS API](https://github.com/bbc/tams). AWS have created an open source sample implementation of that API [here](https://github.com/awslabs/time-addressable-media-store).  This solutions is designed to be used with that implementation.
 
+**NOTE: This solution is not designed to be used in a Production environment. It is designed for dev use cases where a tools is required to help visualise the contents of a TAMS store.**
+
 ## Pre-requisites
 
 This solution requires a running deployment of the [TAMS API](https://github.com/awslabs/time-addressable-media-store).
@@ -85,7 +87,9 @@ Then take the contents of the `dist` subfolder and place this on the web server 
 
 ## Usage
 
-It the initial state thw Web App will just have a simple interface that allows you to browse and view the basic data held in your TAMS store. 4 optional components can be deployed to the infrastructure to add functionality to this solution. The deployment of these components is expected to be done from the AWS Cloudformation Console. Changes should therefore be made by updating the stack parameters for the CloudFormation Stack created for the infrastructure.
+In the initial state the Web App will just have a simple interface that allows you to browse and view the basic data held in your TAMS store. 4 optional components can be deployed to the infrastructure to add functionality to this solution. The deployment of these components is expected to be done from the AWS Cloudformation Console. Changes should therefore be made by updating the stack parameters for the CloudFormation Stack created for the infrastructure.
+
+**NOTE: The Web UI is authenticated using the same Cognito User Pool used by the TAMS API. To login you will first need to create a user in Cognito.**
 
 ### HLS API
 
