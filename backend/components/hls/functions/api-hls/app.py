@@ -10,7 +10,10 @@ from aws_lambda_powertools.event_handler import (
     CORSConfig,
     Response,
 )
-from aws_lambda_powertools.event_handler.exceptions import InternalServerError
+from aws_lambda_powertools.event_handler.exceptions import (
+    InternalServerError,
+    ServiceError,
+)
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from mediatimestamp.immutable import TimeRange
@@ -28,6 +31,19 @@ creds = Credentials(
     scopes=["tams-api/read"],
 )
 default_hls_segments = os.environ["DEFAULT_HLS_SEGMENTS"]
+
+
+@tracer.capture_method(capture_response=False)
+def get_source(source_id):
+    get = requests.get(
+        f"{endpoint}/sources/{source_id}",
+        headers={
+            "Authorization": f"Bearer {creds.token()}",
+        },
+        timeout=30,
+    )
+    get.raise_for_status()
+    return get.json()
 
 
 @tracer.capture_method(capture_response=False)
@@ -57,24 +73,28 @@ def get_flows(source_id):
 
 
 @tracer.capture_method(capture_response=False)
-def get_collection_hls(flows):
-    stage = app.current_event.request_context.stage
+def get_collected_flows(flows):
     flows_queue = deque(flows)
-    video_flows = []
-    audio_flows = []
-    other_flows = []
+    flows = {"video_flows": [], "audio_flows": []}
     while flows_queue:
         flow = flows_queue.pop()
-        if "flow_collection" in flow:
+        # Check if flow is marked as exclude
+        if flow.get("tags", {}).get("hls_exclude", "false").lower() == "true":
+            continue
+        elif "flow_collection" in flow:
             for collected in flow["flow_collection"]:
                 flows_queue.append(get_flow(collected["id"]))
         elif flow["format"] == "urn:x-nmos:format:video":
-            video_flows.append(flow)
+            flows["video_flows"].append(flow)
         elif flow["format"] == "urn:x-nmos:format:audio":
-            audio_flows.append(flow)
-        else:
-            other_flows.append(flow)
-    print("Unused flows:", other_flows)
+            flows["audio_flows"].append(flow)
+    return flows["video_flows"], flows["audio_flows"]
+
+
+@tracer.capture_method(capture_response=False)
+def get_collection_hls(flows):
+    stage = app.current_event.request_context.stage
+    video_flows, audio_flows = get_collected_flows(flows)
     video_flows.sort(key=lambda k: k["max_bit_rate"], reverse=True)
     m3u8_content = "#EXTM3U\n"
     m3u8_content += "#EXT-X-VERSION:3\n"
@@ -94,6 +114,11 @@ def get_collection_hls(flows):
 @app.get("/hls/sources/<sourceId>/output.m3u8")
 @tracer.capture_method(capture_response=False)
 def get_source_hls(sourceId: str):
+    source = get_source(sourceId)
+    if source.get("tags", {}).get("hls_exclude", "false").lower() == "true":
+        raise ServiceError(
+            HTTPStatus.NOT_ACCEPTABLE, "Source is tagged as hls_exclude"
+        )  # 406
     try:
         flows = get_flows(sourceId)
         m3u8_content = get_collection_hls(flows)
@@ -112,8 +137,12 @@ def get_source_hls(sourceId: str):
 @app.get("/hls/flows/<flowId>/output.m3u8")
 @tracer.capture_method(capture_response=False)
 def get_flow_hls(flowId: str):
+    flow = get_flow(flowId)
+    if flow.get("tags", {}).get("hls_exclude", "false").lower() == "true":
+        raise ServiceError(
+            HTTPStatus.NOT_ACCEPTABLE, "Flow is tagged as hls_exclude"
+        )  # 406
     try:
-        flow = get_flow(flowId)
         if "flow_collection" in flow and len(flow["flow_collection"]) > 0:
             m3u8_content = get_collection_hls(
                 get_flow(collected["id"]) for collected in flow["flow_collection"]
