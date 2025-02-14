@@ -91,31 +91,6 @@ def get_collection_hls(flows):
     return m3u8_content
 
 
-@tracer.capture_method(capture_response=False)
-def get_segment_count(flow_id, timerange):
-    get = requests.get(
-        f'{endpoint}/flows/{flow_id}/segments?timerange=_{str(timerange).rsplit("_", maxsplit=1)[-1]}&accept_get_urls=&limit=300',
-        headers={
-            "Authorization": f"Bearer {creds.token()}",
-        },
-        timeout=30,
-    )
-    get.raise_for_status()
-    segment_count = int(get.headers["X-Paging-Count"])
-    while "next" in get.links:
-        next_url = get.links["next"]["url"]
-        get = requests.get(
-            next_url,
-            headers={
-                "Authorization": f"Bearer {creds.token()}",
-            },
-            timeout=30,
-        )
-        get.raise_for_status()
-        segment_count += int(get.headers["X-Paging-Count"])
-    return segment_count
-
-
 @app.get("/hls/sources/<sourceId>/output.m3u8")
 @tracer.capture_method(capture_response=False)
 def get_source_hls(sourceId: str):
@@ -148,11 +123,17 @@ def get_flow_hls(flowId: str):
             flow_created_epoch = datetime.strptime(
                 flow["created"], "%Y-%m-%dT%H:%M:%SZ"
             ).timestamp()
+            flow_segment_duration = flow.get(
+                "segment_duration", {"numerator": 0, "denominator": 1}
+            )
+            flow_segment_duration_float = (
+                flow_segment_duration["numerator"]
+                / flow_segment_duration["denominator"]
+            )
             hls_segment_count = float(
                 flow.get("tags", {}).get("hls_segments", default_hls_segments)
             )
             flow_ingesting = flow.get("tags", {}).get("flow_status", "") == "ingesting"
-            hls_segment_length = int(flow.get("tags", {}).get("hls_segment_length", 0))
             limit_query = (
                 f"&limit={int(hls_segment_count)}"
                 if hls_segment_count != float("inf")
@@ -189,14 +170,11 @@ def get_flow_hls(flowId: str):
             target_duration = (
                 first_segment_timestamp.length.to_unix_float()
             )  # Assuming target duration from the first segment only.
-            if flow_ingesting:
-                if hls_segment_length > 0:
-                    media_sequence = int(
-                        (first_segment_timestamp.start.to_float() - flow_created_epoch)
-                        / hls_segment_length
-                    )
-                else:
-                    media_sequence = get_segment_count(flowId, first_segment_timestamp)
+            if flow_segment_duration_float > 0:
+                media_sequence = int(
+                    (first_segment_timestamp.start.to_float() - flow_created_epoch)
+                    / flow_segment_duration_float
+                )
             program_date_time = datetime.fromtimestamp(
                 first_segment_timestamp.start.to_float()
             ).strftime("%Y-%m-%dT%H:%M:%S.%f")
