@@ -74,9 +74,6 @@ const App = () => {
             <Route path=":flowId" element={<Flow />} />
           </Route>
           <Route path="diagram/:type/:id" element={<Diagram />} />
-          {AWS_HLS_ENDPOINT && (
-            <Route path="player/:type/:id" element={<HlsPlayer />} />
-          )}
           {AWS_ML_ENDPOINT && (
             <Route path="channels" element={<MediaLiveIngestion />} />
           )}
@@ -84,6 +81,9 @@ const App = () => {
             <Route path="jobs" element={<MediaConvertIngestion />} />
           )}
         </Route>
+        {AWS_HLS_ENDPOINT && (
+          <Route path="player/:type/:id" element={<HlsPlayer />} />
+        )}
       </Routes>
     </HashRouter>
   );
