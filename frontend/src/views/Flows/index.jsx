@@ -14,8 +14,8 @@ import {
   TextFilter,
   Toggle,
 } from "@cloudscape-design/components";
-import DeleteModal from "@/components/DeleteModal";
-import DeleteTimeRangeModal from "@/components/DeleteTimeRangeModal";
+import DeleteModal from "./components/DeleteModal";
+import DeleteTimeRangeModal from "./components/DeleteTimeRangeModal";
 import { useDelete, useDeleteTimerange, useFlows } from "@/hooks/useFlows";
 
 import { Link } from "react-router-dom";
