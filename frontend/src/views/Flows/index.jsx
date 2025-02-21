@@ -14,6 +14,8 @@ import {
   TextFilter,
   Toggle,
 } from "@cloudscape-design/components";
+import DeleteModal from "@/components/DeleteModal";
+import DeleteTimeRangeModal from "@/components/DeleteTimeRangeModal";
 import { useDelete, useDeleteTimerange, useFlows } from "@/hooks/useFlows";
 
 import { Link } from "react-router-dom";
@@ -348,51 +350,28 @@ const Flows = () => {
           />
         }
       />
-      <Modal
-        onDismiss={() => setModalVisible(false)}
-        visible={modalVisible}
-        footer={
-          <Box float="right">
-            <SpaceBetween direction="horizontal" size="xs">
-              <Button
-                variant="link"
-                disabled={isDeleting || isDeletingTimerange}
-                onClick={() => setModalVisible(false)}
-              >
-                {actionId === "delete" ? "No" : "Cancel"}
-              </Button>
-              <Button
-                variant="primary"
-                loading={isDeleting || isDeletingTimerange}
-                onClick={actionId === "delete" ? deleteFlow : deleteTimerange}
-              >
-                {actionId === "delete" ? "Yes" : "Delete"}
-              </Button>
-            </SpaceBetween>
-          </Box>
-        }
-        header="Confirmation"
-      >
-        {actionId === "delete" ? (
-          <TextContent>
-            Are you sure you wish to DELETE the selected Flow(s)?
-          </TextContent>
-        ) : (
-          <>
-            <FormField
-              description="Provide a timerange for the segments to be deleted."
-              label="Timerange"
-            >
-              <Input
-                value={timerange}
-                onChange={({ detail }) => {
-                  setTimerange(detail.value);
-                }}
-              />
-            </FormField>
-          </>
-        )}
-      </Modal>
+      {
+        {
+          delete: (
+            <DeleteModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              isDeleting={isDeleting}
+              deleteFlow={deleteFlow}
+            />
+          ),
+          timerange: (
+            <DeleteTimeRangeModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              isDeletingTimerange={isDeletingTimerange}
+              deleteTimerange={deleteTimerange}
+              timerange={timerange}
+              setTimerange={setTimerange}
+            />
+          ),
+        }[actionId]
+      }
     </>
   );
 };
