@@ -1,4 +1,8 @@
-import { ColumnLayout, SpaceBetween } from "@cloudscape-design/components";
+import {
+  ColumnLayout,
+  SpaceBetween,
+  CopyToClipboard,
+} from "@cloudscape-design/components";
 
 import { Link } from "react-router-dom";
 import ValueWithLabel from "@/components/ValueWithLabel";
@@ -48,6 +52,15 @@ const EntityDetails = ({ entity }) => {
                 value.toString()
               ) : (
                 value
+              )}
+              {label === "id" && (
+                <CopyToClipboard
+                  copyButtonAriaLabel="Copy Id"
+                  copyErrorText="Id failed to copy"
+                  copySuccessText="Id copied"
+                  textToCopy={value}
+                  variant="icon"
+                />
               )}
             </ValueWithLabel>
           ))}
