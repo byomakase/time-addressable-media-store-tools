@@ -40,7 +40,7 @@ def upload_file(bucket, key, flow_id):
     )
     put_file.raise_for_status()
     print(put_file.status_code)
-    return media_object["object_id"]
+    return media_object
 
 
 def post_segment(flow_id, object_id, timerange):
@@ -105,6 +105,6 @@ def lambda_handler(event, context):
     else:
         end_timerange = file_no * segment_size
     flow_id = [v for k, v in mappings.items() if key.startswith(k)][0]
-    object_id = upload_file(bucket, key, flow_id)
+    object_id = upload_file(bucket, key, flow_id)["object_id"]
     timerange = f"[{end_timerange - segment_size}:0_{end_timerange}:0)"
     post_segment(flow_id, object_id, timerange)
