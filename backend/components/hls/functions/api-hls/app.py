@@ -214,6 +214,8 @@ def get_flow_hls(flowId: str):
             m3u8_content += f"#EXT-X-PROGRAM-DATE-TIME:{program_date_time[:-3]}+00:00\n"
             if not flow_ingesting:
                 m3u8_content += "#EXT-X-PLAYLIST-TYPE:VOD\n"
+            else:
+                m3u8_content += "#EXT-X-PLAYLIST-TYPE:EVENT\n"
             prev_ts_offset = ""
             for segment in hls_segments:
                 presigned_urls = [
