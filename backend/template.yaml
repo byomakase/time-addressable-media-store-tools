@@ -99,6 +99,65 @@ Resources:
         - arm64
     Condition: DeployApi
 
+  CustomResourceFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+    Properties:
+      Timeout: 30
+      MemorySize: 128
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: functions/custom_resource/
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:DescribeUserPoolClient
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+                  - UserPoolId: !ImportValue
+                      Fn::Sub: ${ApiStackName}-UserPoolId
+
+  GetClientSecret:
+    Type: Custom::ClientSecret
+    Properties:
+      ServiceToken: !GetAtt CustomResourceFunction.Arn
+      ServiceTimeout: 30
+      UserPoolId: !ImportValue
+        Fn::Sub: ${ApiStackName}-UserPoolId
+      ClientId: !ImportValue
+        Fn::Sub: ${ApiStackName}-UserPoolClientId
+
+  TamsConnection:
+    Type: AWS::Events::Connection
+    Properties:
+      AuthorizationType: OAUTH_CLIENT_CREDENTIALS
+      AuthParameters:
+        OAuthParameters:
+          AuthorizationEndpoint: !ImportValue
+            Fn::Sub: ${ApiStackName}-TokenUrl
+          ClientParameters:
+            ClientID: !ImportValue
+              Fn::Sub: ${ApiStackName}-UserPoolClientId
+            ClientSecret: !GetAtt GetClientSecret.ClientSecret
+          HttpMethod: POST
+          OAuthHttpParameters:
+            BodyParameters:
+              - Key: scope
+                Value: tams-api/read tams-api/write tams-api/delete
+                IsValueSecret: False
+              - Key: grant_type
+                Value: client_credentials
+                IsValueSecret: False
+
   HlsApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
