@@ -131,7 +131,6 @@ class Job:
             s3_prefix = "/".join(url_split[3:])
             ssm_parameter_value = {
                 "use_start_epoch": False,
-                "segment_length": segment_length,
             }
             for output in output_group["Outputs"]:
                 flow_id = str(uuid.uuid4())
@@ -142,6 +141,7 @@ class Job:
                     "label": self.label,
                     "description": f"{self.description} - {name_modifier}",
                     "container": "video/mp2t",
+                    "segment_duration": {"numerator": segment_length, "denominator": 1},
                     "essence_parameters": {},
                 }
                 media_info_track = []

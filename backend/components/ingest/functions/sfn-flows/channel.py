@@ -168,7 +168,6 @@ class Channel:
                         .get("use_start_epoch", "false")
                         .lower()
                         == "true",
-                        "segment_length": segment_length,
                     }
                     for i, output in enumerate(output_group["Outputs"]):
                         name_modifier = output["OutputSettings"]["HlsOutputSettings"][
@@ -186,6 +185,10 @@ class Channel:
                                 "description": f'{self.dict["Name"]}: {output_group_name} - {output_name}',
                                 "format": flow_format,
                                 "container": "video/mp2t",
+                                "segment_duration": {
+                                    "numerator": segment_length,
+                                    "denominator": 1,
+                                },
                                 "flow_collection": [],
                             }
                             ssm_parameter_value[f"{s3_prefix}{name_modifier}_"] = (
@@ -211,6 +214,10 @@ class Channel:
                                     audio_flow["id"]
                                 )
                                 audio_flow["container"] = "video/mp2t"
+                                audio_flow["segment_duration"] = {
+                                    "numerator": segment_length,
+                                    "denominator": 1,
+                                }
                             flows.append(audio_flow)
                         if flow_format in [
                             "urn:x-nmos:format:multi",
@@ -232,6 +239,10 @@ class Channel:
                                     video_flow["id"]
                                 )
                                 video_flow["container"] = "video/mp2t"
+                                video_flow["segment_duration"] = {
+                                    "numerator": segment_length,
+                                    "denominator": 1,
+                                }
                             flows.append(video_flow)
                         if multi_flow:
                             flows.append(multi_flow)
