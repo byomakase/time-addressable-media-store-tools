@@ -14,7 +14,7 @@ creds = Credentials(
     token_url=os.environ["TOKEN_URL"],
     user_pool_id=os.environ["USER_POOL_ID"],
     client_id=os.environ["CLIENT_ID"],
-    scopes=["tams-api/write"],
+    scopes=["tams-api/read", "tams-api/write"],
 )
 
 
@@ -41,6 +41,19 @@ def upload_file(bucket, key, flow_id):
     put_file.raise_for_status()
     print(put_file.status_code)
     return media_object
+
+
+def get_segment_length(flow_id):
+    response = requests.get(
+        f"{endpoint}/flows/{flow_id}",
+        headers={
+            "Authorization": f"Bearer {creds.token()}",
+        },
+        timeout=30,
+    )
+    response.raise_for_status()
+    segment_duration = response.json()["segment_duration"]
+    return round(segment_duration["numerator"] / segment_duration.get("denominator", 1))
 
 
 def post_segment(flow_id, object_id, timerange):
@@ -83,7 +96,8 @@ def lambda_handler(event, context):
     parameter_name = f'/{bucket}/{"/".join(key_split)}'
     get_parameter = ssm.get_parameter(Name=parameter_name)
     mappings = json.loads(get_parameter["Parameter"]["Value"])
-    segment_size = mappings["segment_length"]
+    flow_id = [v for k, v in mappings.items() if key.startswith(k)][0]
+    segment_size = get_segment_length(flow_id)
     if mappings["use_start_epoch"]:
         if file_no == 1 and "start_epoch" not in mappings:
             mappings["start_epoch"] = int(
@@ -104,7 +118,6 @@ def lambda_handler(event, context):
         end_timerange = start_epoch + (file_no * segment_size)
     else:
         end_timerange = file_no * segment_size
-    flow_id = [v for k, v in mappings.items() if key.startswith(k)][0]
     object_id = upload_file(bucket, key, flow_id)["object_id"]
     timerange = f"[{end_timerange - segment_size}:0_{end_timerange}:0)"
     post_segment(flow_id, object_id, timerange)
