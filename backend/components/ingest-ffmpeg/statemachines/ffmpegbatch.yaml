@@ -1,0 +1,129 @@
+QueryLanguage: JSONata
+StartAt: CheckTimerange
+States:
+  CheckTimerange:
+    Type: Pass
+    Assign:
+      sourceFlow: >-
+        {% $states.input.sourceFlow %}
+      sourceTimerange: >-
+        {% $boolean($states.input.sourceTimerange) ? $states.input.sourceTimerange: '_' %}
+      ffmpeg: >-
+        {% $states.input.ffmpeg %}
+      destinationFlow: >-
+        {% $states.input.destinationFlow %}
+    Next: GetStoreName
+  GetStoreName:
+    Type: Task
+    Resource: arn:aws:states:::http:invoke
+    Arguments:
+      Method: GET
+      InvocationConfig:
+        ConnectionArn: ${ConnectionArn}
+      ApiEndpoint: ${TamsEndpoint}/service
+    Assign:
+      storeName: >-
+        {% $states.result.ResponseBody.name ? $states.result.ResponseBody.name : 'tams' %}
+    Next: GetSegments
+  GetSegments:
+    Type: Task
+    Resource: arn:aws:states:::http:invoke
+    Arguments:
+      Method: GET
+      InvocationConfig:
+        ConnectionArn: ${ConnectionArn}
+      ApiEndpoint: >-
+        {% '${TamsEndpoint}/flows/' & $sourceFlow & '/segments' %}
+      QueryParameters:
+        limit: 10
+        accept_get_urls: >-
+          {% 'aws.${AwsRegion}:s3:' & $storeName %}
+        timerange: >-
+          {% $sourceTimerange %}
+    Assign:
+      nextKey: >-
+        {% $states.result.Headers.`x-paging-nextkey` ? $states.result.Headers.`x-paging-nextkey`[0] : null %}
+    Output:
+      segments: >-
+        {% $states.result.ResponseBody %}
+    Next: SegmentsFound
+  SegmentsFound:
+    Type: Choice
+    Default: Success
+    Choices:
+      - Next: LoopSegments
+        Condition: >-
+          {% $boolean($states.input.segments) %}
+  LoopSegments:
+    Type: Map
+    Items: >-
+      {% $map($states.input.segments, function($v, $i) {{"index": $i, "segment": $v}}) %}
+    ItemProcessor:
+      ProcessorConfig:
+        Mode: INLINE
+      StartAt: MessageBody
+      States:
+        MessageBody:
+          Type: Pass
+          Output:
+            segments: >-
+              {% [$states.input.segment] %}
+            outputBucket: ${BucketName}
+            outputPrefix: ffmpeg/
+            ffmpeg: >-
+              {% $ffmpeg %}
+            destinationFlow: >-
+              {% $destinationFlow %}
+          Next: Entry
+          Assign:
+            index: >-
+              {% $states.input.index %}
+        Entry:
+          Type: Pass
+          End: true
+          Output:
+            Id: >-
+              {% $string($index) %}
+            MessageBody: >-
+              {% $string($states.input) %}
+    Next: SendMessageBatch
+  SendMessageBatch:
+    Type: Task
+    Resource: arn:aws:states:::aws-sdk:sqs:sendMessageBatch
+    Arguments:
+      Entries: >-
+        {% $states.input %}
+      QueueUrl: ${QueueUrl}
+    Next: NextKeyExists
+  NextKeyExists:
+    Type: Choice
+    Default: Success
+    Choices:
+      - Next: GetSegmentsNextPage
+        Condition: >-
+          {% $boolean($nextKey) %}
+  GetSegmentsNextPage:
+    Type: Task
+    Resource: arn:aws:states:::http:invoke
+    Arguments:
+      Method: GET
+      InvocationConfig:
+        ConnectionArn: ${ConnectionArn}
+      ApiEndpoint: >-
+        {% '${TamsEndpoint}/flows/' & $sourceFlow & '/segments' %}
+      QueryParameters:
+        limit: 10
+        accept_get_urls: >-
+          {% 'aws.${AwsRegion}:s3:' & $storeName %}
+        timerange: >-
+          {% $sourceTimerange %}
+        page: >-
+          {% $nextKey %}
+    Assign:
+      nextKey: >-
+        {% $states.result.Headers.`x-paging-nextkey` ? $states.result.Headers.`x-paging-nextkey`[0] : null %}
+    Output:
+      segments: '{% $states.result.ResponseBody %}'
+    Next: SegmentsFound
+  Success:
+    Type: Succeed

@@ -1,0 +1,422 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  UserPoolId:
+    Type: String
+
+  ApiEndpoint:
+    Type: String
+
+  UserPoolClientId:
+    Type: String
+
+  TokenUrl:
+    Type: String
+
+  AuthRoleName:
+    Type: String
+
+  OpenIdAuthLayerArn:
+    Type: String
+
+  TamsConnectionArn:
+    Type: String
+
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Tracing: Active
+    Architectures:
+      - arm64
+
+  HttpApi:
+    AccessLogSettings:
+      DestinationArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ApiLogGroup}
+      Format: $context.identity.sourceIp - - [$context.requestTime] "$context.httpMethod $context.routeKey $context.protocol" $context.status $context.responseLength $context.requestId $context.extendedRequestId
+    Auth:
+      DefaultAuthorizer: AWS_IAM
+      EnableIamAuthorizer: True
+
+Resources:
+  AuthRolePolicyFFmpeg:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !Ref AuthRoleName
+      PolicyName: FFmpegIngest
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:GetParameter
+            Resource:
+              - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${FfmpegCommandsParameter}
+          - Effect: Allow
+            Action:
+              - execute-api:Invoke
+            Resource:
+              - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/GET/ffmpeg-rules
+              - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/PUT/ffmpeg-rules/*
+              - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/DELETE/ffmpeg-rules/*
+              - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/GET/ffmpeg-jobs
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt ApiFFmpegIngestFunction.Arn
+          - Effect: Allow
+            Action:
+              - states:StartExecution
+            Resource:
+              - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${FfmpegBatch.Name}
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: Encryption not required
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/api/${AWS::StackName}
+      RetentionInDays: 30
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods:
+          - '*'
+        AllowHeaders:
+          - Content-Type
+          - X-Amz-Date
+          - Authorization
+          - X-Api-Key
+          - X-Amz-Security-Token
+        AllowOrigins:
+          - '*'
+
+  ApiFFmpegIngestFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: Resource level permissions not possible
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+    Properties:
+      Timeout: 30
+      MemorySize: 128
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: functions/api-ffmpeg-ingestion/
+      Layers:
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+      Environment:
+        Variables:
+          QUEUE_ARN: !GetAtt FFmpegJobQueue.Arn
+          OUTPUT_BUCKET: !Ref FFmpegBucket
+          EVENT_RULE_ROLE_ARN: !GetAtt EventRuleRole.Arn
+          FFMPEG_BATCH_ARN: !Ref FfmpegBatch
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource:
+                - !GetAtt EventRuleRole.Arn
+            - Effect: Allow
+              Action:
+                - events:ListRuleNamesByTarget
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - events:PutRule
+                - events:PutTargets
+                - events:RemoveTargets
+                - events:DeleteRule
+                - events:ListTargetsByRule
+              Resource:
+                - !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/tams-api/ffmpeg-flow-segments-*
+            - Effect: Allow
+              Action:
+                - states:ListExecutions
+              Resource:
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${FfmpegBatch.Name}
+            - Effect: Allow
+              Action:
+                - states:DescribeExecution
+              Resource:
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:execution:${FfmpegBatch.Name}:*
+      Events:
+        listFFmpegRules:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /ffmpeg-rules
+            Method: get
+        putFFmpegRules:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /ffmpeg-rules/{flowId}/{destinationFlowId}
+            Method: put
+        deleteFFmpegRules:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /ffmpeg-rules/{flowId}/{destinationFlowId}
+            Method: delete
+        listFFmpegJobs:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /ffmpeg-jobs
+            Method: get
+
+  FFmpegBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: Access logging not required.
+          - id: W41
+            reason: Encryption not required.
+          - id: W51
+            reason: Bucket policy not required.
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: True
+
+  FFmpegJobQueue:
+    Type: AWS::SQS::Queue
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W48
+            reason: Encryption not required
+    Properties:
+      VisibilityTimeout: 900
+      MessageRetentionPeriod: 86400
+
+  EventRuleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource:
+                  - !GetAtt FFmpegJobQueue.Arn
+
+  FfmpegCommandsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AWS::StackName}-commands
+      Type: String
+      DataType: text
+      Description: FFmpeg commands available to the Web UI
+      Value: |
+        {
+            "Thumbnail size image": {
+                "command": [
+                    "-ss 00:00:00",
+                    "-frames:v 1",
+                    "-vf scale=320:180",
+                    "-qscale:v 2"
+                ],
+                "outputFormat": "image2"
+            },
+            "Proxy Video": {
+                "command": [
+                    "-c:v libx264",
+                    "-copyts",
+                    "-vf scale=854:480",
+                    "-b:v 1000k"
+                ],
+                "outputFormat": "mpegts"
+            }
+        }
+
+  FFmpegWorkFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+      DockerContext: functions/ffmpeg-worker/
+      Dockerfile: Dockerfile
+    Properties:
+      Timeout: 900
+      MemorySize: 10240
+      PackageType: Image
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref FFmpegJobQueue
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+              Resource:
+                - !GetAtt FFmpegJobQueue.Arn
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource:
+                - !Sub arn:aws:s3:::*/*
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub ${FFmpegBucket.Arn}/*
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FFmpegJobQueue.Arn
+            BatchSize: 1
+            Enabled: False
+
+  FfmpegBatch:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachines/ffmpegbatch.yaml
+      DefinitionSubstitutions:
+        AwsRegion: !Ref AWS::Region
+        ConnectionArn: !Ref TamsConnectionArn
+        TamsEndpoint: !Ref ApiEndpoint
+        QueueUrl: !Ref FFmpegJobQueue
+        BucketName: !Ref FFmpegBucket
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:RetrieveConnectionCredentials
+              Resource:
+                - !Ref TamsConnectionArn
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:DescribeSecret
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:events!connection/${TamsConnection}/*
+                  - TamsConnection: !Select [1, !Split [/, !Ref TamsConnectionArn]]
+            - Effect: Allow
+              Action:
+                - states:InvokeHTTPEndpoint
+              Resource:
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*
+              Condition:
+                StringEquals:
+                  states:HTTPMethod:
+                    - GET
+                StringLike:
+                  states:HTTPEndpoint:
+                    - !Sub ${ApiEndpoint}/service
+                    - !Sub ${ApiEndpoint}/flows/*/segments
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource:
+                - !GetAtt FFmpegJobQueue.Arn
+
+  S3IngestionFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+    Properties:
+      Timeout: 30
+      MemorySize: 128
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: functions/s3-ingestion
+      Layers:
+        - !Ref OpenIdAuthLayerArn
+      Environment:
+        Variables:
+          TAMS_ENDPOINT: !Ref ApiEndpoint
+          TOKEN_URL: !Ref TokenUrl
+          USER_POOL_ID: !Ref UserPoolId
+          CLIENT_ID: !Ref UserPoolClientId
+          FFMPEG_BUCKET: !Ref FFmpegBucket
+          FFMPEG_PREFIX: ffmpeg/
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:DescribeUserPoolClient
+              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:PutParameter
+              Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:DeleteObject
+              Resource:
+                - !Sub ${FFmpegBucket.Arn}/ffmpeg/*
+      Events:
+        EBRule:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.s3
+              detail-type:
+                - Object Created
+              detail:
+                bucket:
+                  name:
+                    - !Ref FFmpegBucket
+                object:
+                  key:
+                    - prefix: ffmpeg/
+
+Outputs:
+  ApiEndpoint:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com
+
+  ParameterName:
+    Value: !Ref FfmpegCommandsParameter
+
+  FfmpegBatchArn:
+    Value: !Ref FfmpegBatch
