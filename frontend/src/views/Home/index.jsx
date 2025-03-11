@@ -14,28 +14,12 @@ const Home = () => {
 
   On each of these pages there is a link at the top which will show you an HLS Player representing your chosen item or a diagram to better visualise the associated TAMS entities.
 
-  - **MediaLive Channels** shows a list of AWS Elemental MediaLive Channels. You can choose to setup (or remove) an Ingest workflow and/or start/stop the Channel.
+  - **MediaLive Channels** shows a list of AWS Elemental MediaLive Channels. You can choose to Ingest the channel and/or start/stop the Channel.
+  - **MediaConvert Jobs** shows a list of AWS Elemental MediaConvert Jobs. You can choose to Ingest the job.
 
-  > **NOTE**: In order to ingest content from a MediaLive Channel into TAMS it needs both an Ingest Workflow running and the Channel to be running.
-
-  - **MediaConvert Jobs** shows a list of AWS Elemental MediaConvert Jobs. It shows the status of the job(s) and a link to the Source that it was ingested against.
-
-  ## MediaConvert Ingestion
-
-  In order to ingest a MediaConvert job you will need to provide 2 things:
-
-  - A MediaConvert Job JSON specification file. This file MUST be named \`mediaconvert.json\` and be placed in a sub-folder of the \`uploads\` folder of the **MediaConvertBucketName** bucket that was created during deployment.
-  - A Media file to be ingested. This file should be placed in the same sub-folder as the job \`mediaconvert.json\` file (this controls which job settings will be used for the ingestion).
-
-  ***IMPORTANT: The underscore character should not be used in the naming of the folder or the media file name. Doing so will prevent the ingest from running.***
+  > **NOTE**: The Ingest workflow for both MediaLive and MediaConvert uses the HLS manifest file produced by those services to determine how and what to ingest. Therefore only output types of HLS for Channels and Jobs will support ingest.
 
   ## Special Tags
-
-  ### AWS MediaLive Channel Tags
-
-  | Tag Key                  | Type   | Notes |
-  | ------------------------ | ------ | ----- |
-  | ***use_start_epoch***    | _bool_ | If set with a value of **true** then the timerange value for ingested segments will be EPOCH based. If it has a different value or is missing the timerange will be zero based |
 
   ### TAMS Flow Tags
 

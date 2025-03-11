@@ -7,10 +7,6 @@ export const AWS_TAMS_ENDPOINT = import.meta.env.VITE_APP_AWS_API_ENDPOINT;
 export const AWS_HLS_API_ENDPOINT = import.meta.env.VITE_APP_AWS_HLS_API_ENDPOINT
 export const AWS_HLS_INGEST_ENDPOINT = import.meta.env.VITE_APP_AWS_HLS_INGEST_ENDPOINT
 export const AWS_HLS_INGEST_ARN = import.meta.env.VITE_APP_AWS_HLS_INGEST_ARN;
-export const AWS_ML_ENDPOINT = import.meta.env.VITE_APP_AWS_ML_ENDPOINT
-export const AWS_ML_START_ARN = import.meta.env.VITE_APP_AWS_ML_START_ARN;
-export const AWS_ML_STOP_ARN = import.meta.env.VITE_APP_AWS_ML_STOP_ARN;
-export const AWS_MC_ENDPOINT = import.meta.env.VITE_APP_AWS_MC_ENDPOINT
 /************* END OF ENVIRONMENT VARIABLES **************/
 export const PAGE_SIZE = 10;
 export const TAMS_PAGE_LIMIT = 300;
