@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -5,19 +6,56 @@ import {
   Input,
   Modal,
   SpaceBetween,
+  TextContent,
 } from "@cloudscape-design/components";
+import useStore from "@/stores/useStore";
+import { useDeleteTimerange } from "@/hooks/useFlows";
 
 const DeleteTimeRangeModal = ({
   modalVisible,
   setModalVisible,
-  isDeletingTimerange,
-  deleteTimerange,
-  timerange,
-  setTimerange,
+  selectedItems,
+  setSelectedItems,
 }) => {
+  const { delTimerange, isDeletingTimerange } = useDeleteTimerange();
+  const addAlertItems = useStore((state) => state.addAlertItems);
+  const delAlertItem = useStore((state) => state.delAlertItem);
+  const [timerange, setTimerange] = useState("");
+
+  const deleteTimerange = async () => {
+    const promises = selectedItems.map((item) =>
+      delTimerange({ flowId: item.id, timerange })
+    );
+    const id = crypto.randomUUID();
+    addAlertItems(
+      selectedItems.map((flow, n) => ({
+        type: "success",
+        dismissible: true,
+        dismissLabel: "Dismiss message",
+        content: (
+          <TextContent>
+            Flow segments on flow {flow.id} within the timerange {timerange} are
+            being deleted. This will happen asynchronously...
+          </TextContent>
+        ),
+        id: `${id}-${n}`,
+        onDismiss: () => delAlertItem(`${id}-${n}`),
+      }))
+    );
+    await Promise.all(promises);
+    setModalVisible(false);
+    setTimerange("");
+    setSelectedItems([]);
+  };
+
+  const handleDismiss = () => {
+    setModalVisible(false);
+    setTimerange("");
+  };
+
   return (
     <Modal
-      onDismiss={() => setModalVisible(false)}
+      onDismiss={handleDismiss}
       visible={modalVisible}
       footer={
         <Box float="right">
@@ -25,7 +63,7 @@ const DeleteTimeRangeModal = ({
             <Button
               variant="link"
               disabled={isDeletingTimerange}
-              onClick={() => setModalVisible(false)}
+              onClick={handleDismiss}
             >
               Cancel
             </Button>
@@ -41,19 +79,17 @@ const DeleteTimeRangeModal = ({
       }
       header="Confirmation"
     >
-      <>
-        <FormField
-          description="Provide a timerange for the segments to be deleted."
-          label="Timerange"
-        >
-          <Input
-            value={timerange}
-            onChange={({ detail }) => {
-              setTimerange(detail.value);
-            }}
-          />
-        </FormField>
-      </>
+      <FormField
+        description="Provide a timerange for the segments to be deleted."
+        label="Timerange"
+      >
+        <Input
+          value={timerange}
+          onChange={({ detail }) => {
+            setTimerange(detail.value);
+          }}
+        />
+      </FormField>
     </Modal>
   );
 };

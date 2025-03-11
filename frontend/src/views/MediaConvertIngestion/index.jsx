@@ -134,7 +134,7 @@ const MediaConvertIngestion = () => {
         variant="borderless"
         loadingText="Loading resources"
         loading={isLoading}
-        trackBy="Id"
+        trackBy="id"
         header={<Header>Jobs</Header>}
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
