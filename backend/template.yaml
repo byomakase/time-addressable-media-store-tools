@@ -8,6 +8,7 @@ Metadata:
         Parameters:
           - DeployHlsApi
           - DeployIngestHls
+          - DeployIngestFfmpeg
       - Label:
           default: Configuration
         Parameters:
@@ -19,6 +20,8 @@ Metadata:
         default: Deploy HLS Endpoint?
       DeployIngestHls:
         default: Deploy HLS ingest?
+      DeployIngestFfmpeg:
+        default: Deploy Ffmpeg ingest?
 
 Parameters:
   ApiStackName:
@@ -38,12 +41,23 @@ Parameters:
       - "No"
     Default: "No"
 
+  DeployIngestFfmpeg:
+    Type: String
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+
 Conditions:
   DeployHlsApi: !Equals [!Ref DeployHlsApi, "Yes"]
 
   DeployIngestHls: !Equals [!Ref DeployIngestHls, "Yes"]
 
+  DeployIngestFfmpeg: !Equals [!Ref DeployIngestFfmpeg, "Yes"]
+
   DeployHls: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls]
+
+  DeployApi: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls, !Condition DeployIngestFfmpeg]
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -83,7 +97,7 @@ Resources:
         - python3.13
       CompatibleArchitectures:
         - arm64
-    Condition: DeployHls
+    Condition: DeployApi
 
   CustomResourceFunction:
     Type: AWS::Serverless::Function
@@ -203,6 +217,25 @@ Resources:
         TamsConnectionArn: !GetAtt TamsConnection.Arn
     Condition: DeployIngestHls
 
+  IngestFfmpegStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/ingest-ffmpeg/template.yaml
+      Parameters:
+        UserPoolId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolId
+        ApiEndpoint: !ImportValue
+          Fn::Sub: ${ApiStackName}-ApiEndpoint
+        UserPoolClientId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolClientId
+        TokenUrl: !ImportValue
+          Fn::Sub: ${ApiStackName}-TokenUrl
+        AuthRoleName: !ImportValue
+          Fn::Sub: ${ApiStackName}-AuthRoleName
+        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+        TamsConnectionArn: !GetAtt TamsConnection.Arn
+    Condition: DeployIngestFfmpeg
+
 Outputs:
   HlsApiEndpoint:
     Value: !If
@@ -220,4 +253,22 @@ Outputs:
     Value: !If
       - DeployIngestHls
       - !GetAtt IngestHlsStack.Outputs.IngestHlsArn
+      - ""
+
+  FfmpegEndpoint:
+    Value: !If
+      - DeployIngestFfmpeg
+      - !GetAtt IngestFfmpegStack.Outputs.ApiEndpoint
+      - ""
+
+  FfmpegCommandParameter:
+    Value: !If
+      - DeployIngestFfmpeg
+      - !GetAtt IngestFfmpegStack.Outputs.ParameterName
+      - ""
+
+  FfmpegBatchArn:
+    Value: !If
+      - DeployIngestFfmpeg
+      - !GetAtt IngestFfmpegStack.Outputs.FfmpegBatchArn
       - ""
