@@ -8,8 +8,6 @@ Metadata:
         Parameters:
           - DeployHlsApi
           - DeployIngestHls
-          - DeployIngestMediaLive
-          - DeployIngestMediaConvert
       - Label:
           default: Configuration
         Parameters:
@@ -21,10 +19,6 @@ Metadata:
         default: Deploy HLS Endpoint?
       DeployIngestHls:
         default: Deploy HLS ingest?
-      DeployIngestMediaLive:
-        default: Deploy MediaLive Channel ingest?
-      DeployIngestMediaConvert:
-        default: Deploy MediaConvert Job ingest?
 
 Parameters:
   ApiStackName:
@@ -44,34 +38,12 @@ Parameters:
       - "No"
     Default: "No"
 
-  DeployIngestMediaLive:
-    Type: String
-    AllowedValues:
-      - "Yes"
-      - "No"
-    Default: "No"
-
-  DeployIngestMediaConvert:
-    Type: String
-    AllowedValues:
-      - "Yes"
-      - "No"
-    Default: "No"
-
 Conditions:
   DeployHlsApi: !Equals [!Ref DeployHlsApi, "Yes"]
 
   DeployIngestHls: !Equals [!Ref DeployIngestHls, "Yes"]
 
-  DeployHlsParam: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls]
-
-  DeployIngestMediaLive: !Equals [!Ref DeployIngestMediaLive, "Yes"]
-
-  DeployIngestMediaConvert: !Equals [!Ref DeployIngestMediaConvert, "Yes"]
-
-  DeployApi: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls, !Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
-
-  DeployIngest: !Or [!Condition DeployIngestHls, !Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
+  DeployHls: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls]
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -111,7 +83,7 @@ Resources:
         - python3.13
       CompatibleArchitectures:
         - arm64
-    Condition: DeployApi
+    Condition: DeployHls
 
   CustomResourceFunction:
     Type: AWS::Serverless::Function
@@ -168,7 +140,7 @@ Resources:
             "hls": "avc1"
           }
         ]
-    Condition: DeployHlsParam
+    Condition: DeployHls
 
   TamsConnection:
     Type: AWS::Events::Connection
@@ -211,24 +183,6 @@ Resources:
         CodecsParameterName: !Ref CodecsParameter
     Condition: DeployHlsApi
 
-  IngestStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: components/ingest/template.yaml
-      Parameters:
-        UserPoolId: !ImportValue
-          Fn::Sub: ${ApiStackName}-UserPoolId
-        ApiEndpoint: !ImportValue
-          Fn::Sub: ${ApiStackName}-ApiEndpoint
-        UserPoolClientId: !ImportValue
-          Fn::Sub: ${ApiStackName}-UserPoolClientId
-        TokenUrl: !ImportValue
-          Fn::Sub: ${ApiStackName}-TokenUrl
-        AuthRoleName: !ImportValue
-          Fn::Sub: ${ApiStackName}-AuthRoleName
-        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
-    Condition: DeployIngest
-
   IngestHlsStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -249,33 +203,6 @@ Resources:
         TamsConnectionArn: !GetAtt TamsConnection.Arn
     Condition: DeployIngestHls
 
-  IngestMediaLiveStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: components/ingest-medialive/template.yaml
-      Parameters:
-        AuthRoleName: !ImportValue
-          Fn::Sub: ${ApiStackName}-AuthRoleName
-        SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
-        SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
-        S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
-        S3IngestionFunctionArn: !GetAtt IngestStack.Outputs.S3IngestionFunctionArn
-        ParentStackName: !Ref AWS::StackName
-    Condition: DeployIngestMediaLive
-
-  IngestMediaConvertStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: components/ingest-mediaconvert/template.yaml
-      Parameters:
-        AuthRoleName: !ImportValue
-          Fn::Sub: ${ApiStackName}-AuthRoleName
-        SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
-        SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
-        S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
-        S3IngestionFunctionArn: !GetAtt IngestStack.Outputs.S3IngestionFunctionArn
-    Condition: DeployIngestMediaConvert
-
 Outputs:
   HlsApiEndpoint:
     Value: !If
@@ -293,34 +220,4 @@ Outputs:
     Value: !If
       - DeployIngestHls
       - !GetAtt IngestHlsStack.Outputs.IngestHlsArn
-      - ""
-
-  MlEndpoint:
-    Value: !If
-      - DeployIngestMediaLive
-      - !GetAtt IngestMediaLiveStack.Outputs.ApiEndpoint
-      - ""
-
-  MlStartArn:
-    Value: !If
-      - DeployIngestMediaLive
-      - !GetAtt IngestMediaLiveStack.Outputs.StartArn
-      - ""
-
-  MlStopArn:
-    Value: !If
-      - DeployIngestMediaLive
-      - !GetAtt IngestMediaLiveStack.Outputs.StopArn
-      - ""
-
-  McEndpoint:
-    Value: !If
-      - DeployIngestMediaConvert
-      - !GetAtt IngestMediaConvertStack.Outputs.ApiEndpoint
-      - ""
-
-  MediaConvertBucketName:
-    Value: !If
-      - DeployIngestMediaConvert
-      - !GetAtt IngestMediaConvertStack.Outputs.BucketName
       - ""

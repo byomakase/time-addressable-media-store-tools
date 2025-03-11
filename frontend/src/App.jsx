@@ -2,8 +2,6 @@ import {
   AWS_HLS_API_ENDPOINT,
   AWS_HLS_INGEST_ENDPOINT,
   AWS_IDENTITY_POOL_ID,
-  AWS_MC_ENDPOINT,
-  AWS_ML_ENDPOINT,
   AWS_REGION,
   AWS_TAMS_ENDPOINT,
   AWS_USER_POOL_CLIENT_WEB_ID,
@@ -47,14 +45,6 @@ Amplify.configure({
         endpoint: AWS_HLS_INGEST_ENDPOINT,
         region: AWS_REGION,
       },
-      MediaLive: {
-        endpoint: AWS_ML_ENDPOINT,
-        region: AWS_REGION,
-      },
-      MediaConvert: {
-        endpoint: AWS_MC_ENDPOINT,
-        region: AWS_REGION,
-      },
     },
   },
 });
@@ -77,13 +67,11 @@ const App = () => {
           </Route>
           <Route path="diagram/:type/:id" element={<Diagram />} />
           {AWS_HLS_INGEST_ENDPOINT && (
-            <Route path="workflows" element={<HlsIngestion />} />
-          )}
-          {AWS_ML_ENDPOINT && (
-            <Route path="channels" element={<MediaLiveIngestion />} />
-          )}
-          {AWS_MC_ENDPOINT && (
-            <Route path="jobs" element={<MediaConvertIngestion />} />
+            <>
+              <Route path="workflows" element={<HlsIngestion />} />
+              <Route path="channels" element={<MediaLiveIngestion />} />
+              <Route path="jobs" element={<MediaConvertIngestion />} />
+            </>
           )}
         </Route>
         {AWS_HLS_API_ENDPOINT && (

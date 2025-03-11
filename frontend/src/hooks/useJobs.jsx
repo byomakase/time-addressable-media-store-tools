@@ -1,7 +1,7 @@
 import { get } from "aws-amplify/api";
 import useSWR from "swr";
 
-const fetcher = (path, apiName = "MediaConvert") =>
+const fetcher = (path, apiName = "HlsIngest") =>
   get({ apiName, path })
     .response.then((res) => res.body)
     .then((body) => body.json());
