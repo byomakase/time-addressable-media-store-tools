@@ -1,4 +1,4 @@
-import { AWS_HLS_INGEST_ENDPOINT } from "@/constants";
+import { AWS_FFMPEG_ENDPOINT, AWS_HLS_INGEST_ENDPOINT } from "@/constants";
 import {
   AppLayout,
   BreadcrumbGroup,
@@ -95,6 +95,24 @@ const Layout = () => {
                         type: "link",
                         text: "MediaConvert Jobs",
                         href: "/jobs",
+                      },
+                    ],
+                  }
+                : {},
+              AWS_FFMPEG_ENDPOINT
+                ? {
+                    type: "section",
+                    text: "FFmpeg",
+                    items: [
+                      {
+                        type: "link",
+                        text: "Rules",
+                        href: "/ffmpeg-rules",
+                      },
+                      {
+                        type: "link",
+                        text: "Jobs",
+                        href: "/ffmpeg-jobs",
                       },
                     ],
                   }

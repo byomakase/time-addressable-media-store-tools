@@ -3,25 +3,21 @@ import {
   Button,
   ButtonDropdown,
   CollectionPreferences,
-  FormField,
   Header,
-  Input,
-  Modal,
   Pagination,
   SpaceBetween,
   Table,
-  TextContent,
   TextFilter,
   Toggle,
 } from "@cloudscape-design/components";
 import DeleteModal from "./components/DeleteModal";
 import DeleteTimeRangeModal from "./components/DeleteTimeRangeModal";
-import { useDelete, useDeleteTimerange, useFlows } from "@/hooks/useFlows";
-
+import { useFlows } from "@/hooks/useFlows";
 import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useState } from "react";
-import useStore from "@/stores/useStore";
+import CreateRuleModal from "./components/CreateRuleModal";
+import CreateJobModal from "./components/CreateJobModal";
 
 const columnDefinitions = [
   {
@@ -173,8 +169,6 @@ const collectionPreferencesProps = {
 
 const Flows = () => {
   const { flows, mutate, isLoading, isValidating } = useFlows();
-  const { del, isDeleting } = useDelete();
-  const { delTimerange, isDeletingTimerange } = useDeleteTimerange();
   const [showHierarchy, setShowHierarchy] = useState(true);
   const [preferences, setPreferences] = useState({
     pageSize: 10,
@@ -203,8 +197,7 @@ const Flows = () => {
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [actionId, setActionId] = useState("");
-  const [timerange, setTimerange] = useState("");
-  const { items, collectionProps, filterProps, paginationProps } =
+  const { items, collectionProps, filterProps, paginationProps, actions } =
     useCollection(isValidating || isLoading ? [] : flows, {
       expandableRows: showHierarchy && {
         getId: (item) => item.id,
@@ -228,55 +221,7 @@ const Flows = () => {
       selection: {},
     });
   const { selectedItems } = collectionProps;
-  const addAlertItems = useStore((state) => state.addAlertItems);
-  const delAlertItem = useStore((state) => state.delAlertItem);
-
-  const deleteFlow = async () => {
-    const promises = selectedItems.map((item) => del({ flowId: item.id }));
-    const id = crypto.randomUUID();
-    addAlertItems(
-      selectedItems.map((flow, n) => ({
-        type: "success",
-        dismissible: true,
-        dismissLabel: "Dismiss message",
-        content: (
-          <TextContent>
-            Flow {flow.id} is being deleted. This will happen asynchronously.
-            You may need to refresh to see the change.
-          </TextContent>
-        ),
-        id: `${id}-${n}`,
-        onDismiss: () => delAlertItem(`${id}-${n}`),
-      }))
-    );
-    await Promise.all(promises);
-    setModalVisible(false);
-  };
-
-  const deleteTimerange = async () => {
-    const promises = selectedItems.map((item) =>
-      delTimerange({ flowId: item.id, timerange })
-    );
-    const id = crypto.randomUUID();
-    addAlertItems(
-      selectedItems.map((flow, n) => ({
-        type: "success",
-        dismissible: true,
-        dismissLabel: "Dismiss message",
-        content: (
-          <TextContent>
-            Flow segments on flow {flow.id} within the timerange {timerange} are
-            being deleted. This will happen asynchronously...
-          </TextContent>
-        ),
-        id: `${id}-${n}`,
-        onDismiss: () => delAlertItem(`${id}-${n}`),
-      }))
-    );
-    await Promise.all(promises);
-    setTimerange("");
-    setModalVisible(false);
-  };
+  const { setSelectedItems } = actions;
 
   const handleOnClick = ({ detail }) => {
     setActionId(detail.id);
@@ -310,6 +255,7 @@ const Flows = () => {
                 <ButtonDropdown
                   onItemClick={handleOnClick}
                   disabled={selectedItems.length === 0}
+                  expandableGroups
                   items={[
                     {
                       text: "Delete",
@@ -320,6 +266,22 @@ const Flows = () => {
                       text: "Timerange delete",
                       id: "timerange",
                       disabled: !(selectedItems.length > 0),
+                    },
+                    {
+                      text: "FFmpeg",
+                      id: "ffmpeg",
+                      disabled: !(selectedItems.length === 1),
+                      disabledReason: "Select only one Flow for this action.",
+                      items: [
+                        {
+                          text: "Create FFmpeg Rule",
+                          id: "create-rule",
+                        },
+                        {
+                          text: "Create FFmpeg Job",
+                          id: "create-job",
+                        },
+                      ]
                     },
                   ]}
                 >
@@ -356,18 +318,56 @@ const Flows = () => {
             <DeleteModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              isDeleting={isDeleting}
-              deleteFlow={deleteFlow}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
             />
           ),
           timerange: (
             <DeleteTimeRangeModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              isDeletingTimerange={isDeletingTimerange}
-              deleteTimerange={deleteTimerange}
-              timerange={timerange}
-              setTimerange={setTimerange}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
+            />
+          ),
+          "create-rule": (
+            <CreateRuleModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedFlowId={
+                selectedItems.length > 0 ? selectedItems[0].id : ""
+              }
+              setSelectedItems={setSelectedItems}
+              flowIds={
+                isValidating || isLoading
+                  ? []
+                  : flows
+                      .filter((flow) => !selectedItems.includes(flow))
+                      .map((flow) => ({
+                        label: flow.description,
+                        value: flow.id,
+                      }))
+              }
+            />
+          ),
+          "create-job": (
+            <CreateJobModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedFlowId={
+                selectedItems.length > 0 ? selectedItems[0].id : ""
+              }
+              setSelectedItems={setSelectedItems}
+              flowIds={
+                isValidating || isLoading
+                  ? []
+                  : flows
+                      .filter((flow) => !selectedItems.includes(flow))
+                      .map((flow) => ({
+                        label: flow.description,
+                        value: flow.id,
+                      }))
+              }
             />
           ),
         }[actionId]

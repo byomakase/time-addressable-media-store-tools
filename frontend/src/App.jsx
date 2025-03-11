@@ -2,6 +2,7 @@ import {
   AWS_HLS_API_ENDPOINT,
   AWS_HLS_INGEST_ENDPOINT,
   AWS_IDENTITY_POOL_ID,
+  AWS_FFMPEG_ENDPOINT,
   AWS_REGION,
   AWS_TAMS_ENDPOINT,
   AWS_USER_POOL_CLIENT_WEB_ID,
@@ -19,6 +20,8 @@ import HlsPlayer from "@/views/HlsPlayer";
 import Home from "@/views/Home";
 import Layout from "@/views/Layout";
 import HlsIngestion from "@/views/HlsIngestion";
+import FfmpegRules from "@/views/FfmpegRules";
+import FfmpegJobs from "@/views/FfmpegJobs";
 import MediaConvertIngestion from "@/views/MediaConvertIngestion";
 import MediaLiveIngestion from "@/views/MediaLiveIngestion";
 import React from "react";
@@ -43,6 +46,10 @@ Amplify.configure({
       },
       HlsIngest: {
         endpoint: AWS_HLS_INGEST_ENDPOINT,
+        region: AWS_REGION,
+      },
+      Ffmpeg: {
+        endpoint: AWS_FFMPEG_ENDPOINT,
         region: AWS_REGION,
       },
     },
@@ -71,6 +78,12 @@ const App = () => {
               <Route path="workflows" element={<HlsIngestion />} />
               <Route path="channels" element={<MediaLiveIngestion />} />
               <Route path="jobs" element={<MediaConvertIngestion />} />
+            </>
+          )}
+          {AWS_FFMPEG_ENDPOINT && (
+            <>
+              <Route path="ffmpeg-rules" element={<FfmpegRules />} />
+              <Route path="ffmpeg-jobs" element={<FfmpegJobs />} />
             </>
           )}
         </Route>
