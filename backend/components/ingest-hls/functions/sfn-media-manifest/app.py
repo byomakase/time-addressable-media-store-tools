@@ -1,4 +1,3 @@
-import json
 import os
 from urllib.parse import urlparse
 
@@ -12,9 +11,7 @@ from mediatimestamp.immutable import TimeRange, Timestamp
 tracer = Tracer()
 logger = Logger()
 
-sqs = boto3.client("sqs")
 s3 = boto3.client("s3")
-queue_url = os.environ["QUEUE_URL"]
 
 
 @tracer.capture_method(capture_response=False)
@@ -39,18 +36,6 @@ def get_file(source: str) -> bytes:
             return response.content
 
 
-@tracer.capture_method(capture_response=False)
-def send_message_batch(messages: list) -> None:
-    """Sends a batch of messages to the SQS queue"""
-    if not messages:
-        return
-    entries = [
-        {"Id": str(i), "MessageBody": json.dumps(message)}
-        for i, message in enumerate(messages)
-    ]
-    sqs.send_message_batch(QueueUrl=queue_url, Entries=entries)
-
-
 @logger.inject_lambda_context(log_event=True)
 @tracer.capture_lambda_handler(capture_response=False)
 # pylint: disable=unused-argument
@@ -63,7 +48,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
         raise ValueError("Not a media manifest")
     last_media_sequence = event.get("lastMediaSequence", 0)
     last_timestamp = Timestamp.from_str(event.get("lastTimestamp", "0:0"))
-    messages = []
+    segments = []
     for segment in manifest.segments:
         if segment.media_sequence > last_media_sequence:
             segment_start = last_timestamp
@@ -71,7 +56,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
                 segment_start.to_nanosec() + (segment.duration * 1000000000)
             )
             timerange = TimeRange(segment_start, segment_end, TimeRange.INCLUDE_START)
-            messages.append(
+            segments.append(
                 {
                     "flow_id": flow_id,
                     "timerange": str(timerange),
@@ -84,16 +69,14 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
             )
             last_timestamp = segment_end
             last_media_sequence = segment.media_sequence
-            if len(messages) == 10:
-                send_message_batch(messages)
-                messages = []
-    send_message_batch(messages)
+    response = {"segments": segments}
     # pylint: disable=no-member
-    if not manifest.is_endlist:
-        return {
-            **event,
-            "lastMediaSequence": last_media_sequence,
-            "lastTimestamp": str(last_timestamp),
-            "targetDuration": manifest.target_duration,
-        }
-    return {}
+    if manifest.is_endlist:
+        return response
+    return {
+        **response,
+        **event,
+        "lastMediaSequence": last_media_sequence,
+        "lastTimestamp": str(last_timestamp),
+        "targetDuration": manifest.target_duration,
+    }
