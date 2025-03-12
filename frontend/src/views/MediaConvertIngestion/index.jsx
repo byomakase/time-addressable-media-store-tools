@@ -15,7 +15,7 @@ import {
   TextContent,
   TextFilter,
 } from "@cloudscape-design/components";
-import StartIngestModal from "@/components/StartIngestModal";
+import StartIngestElementalModal from "@/components/StartIngestElementalModal";
 
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import useJobs from "@/hooks/useJobs";
@@ -23,7 +23,7 @@ import useJobs from "@/hooks/useJobs";
 const MediaConvertIngestion = () => {
   const { jobs, isLoading } = useJobs();
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedItem, setSelectedItem] = useState();
+  const [selectedItem, setSelectedItem] = useState({});
 
   const preferences = {
     pageSize: PAGE_SIZE,
@@ -142,14 +142,12 @@ const MediaConvertIngestion = () => {
         pagination={<Pagination {...paginationProps} />}
         filter={<TextFilter {...filterProps} />}
       />
-      <StartIngestModal
+      <StartIngestElementalModal
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
         source="mediaconvert"
-        recordId={selectedItem?.id}
-        initialManifest={selectedItem?.manifestUri}
+        selectedItem={selectedItem}
         setSelectedItem={setSelectedItem}
-        readOnlyManifest={true}
       />
     </>
   );

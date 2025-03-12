@@ -10,7 +10,7 @@ import {
   Table,
   TextFilter,
 } from "@cloudscape-design/components";
-import StartIngestModal from "@/components/StartIngestModal";
+import StartIngestModal from "./components/StartIngestModal";
 
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useWorkflows } from "@/hooks/useStateMachine";
@@ -120,11 +120,6 @@ const HlsIngestion = () => {
       <StartIngestModal
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
-        source="hls"
-        recordId={crypto.randomUUID()}
-        initialManifest=""
-        setSelectedItem={() => true}
-        readOnlyManifest={false}
       />
     </>
   );

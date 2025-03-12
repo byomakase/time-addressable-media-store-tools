@@ -17,20 +17,15 @@ import stringify from "json-stable-stringify";
 const StartIngestModal = ({
   modalVisible,
   setModalVisible,
-  source,
-  recordId,
-  initialManifest,
-  setSelectedItem,
-  readOnlyManifest,
 }) => {
   const [label, setLabel] = useState("");
-  const [manifestUri, setManifestUri] = useState(initialManifest);
+  const [manifestUri, setManifestUri] = useState("");
   const { execute, isExecuting } = useStateMachine();
   const addAlertItem = useStore((state) => state.addAlertItem);
   const delAlertItem = useStore((state) => state.delAlertItem);
 
   const performAction = async () => {
-    const id = `${source}-${recordId}-${Date.now()}`;
+    const id = `hls-${crypto.randomUUID()}-${Date.now()}`;
     await execute({
       stateMachineArn: AWS_HLS_INGEST_ARN,
       name: id,
@@ -53,15 +48,13 @@ const StartIngestModal = ({
       onDismiss: () => delAlertItem(id),
     });
     setModalVisible(false);
-    setSelectedItem();
-    setManifestUri(initialManifest);
+    setManifestUri("");
     setLabel("");
   };
 
   const handleDismiss = async () => {
     setModalVisible(false);
-    setSelectedItem();
-    setManifestUri(initialManifest);
+    setManifestUri("");
     setLabel("");
   };
 
@@ -98,7 +91,6 @@ const StartIngestModal = ({
         >
           <Textarea
             value={manifestUri}
-            readOnly={readOnlyManifest}
             onChange={({ detail }) => {
               setManifestUri(detail.value);
             }}
