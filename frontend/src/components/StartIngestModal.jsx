@@ -36,7 +36,7 @@ const StartIngestModal = ({
       name: id,
       input: stringify({
         label,
-        manifest_location: manifestUri,
+        manifestLocation: manifestUri,
       }),
       traceHeader: id,
     });
