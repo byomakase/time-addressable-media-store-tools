@@ -27,7 +27,7 @@ export const STATUS_MAPPINGS = {
     PENDING_REDRIVE: "error",
     PROGRESSING: "loading",
     RECOVERING: "loading",
-    RUNNING: "success",
+    RUNNING: "loading",
     STARTING: "loading",
     STOPPING: "loading",
     SUBMITTED: "info",
