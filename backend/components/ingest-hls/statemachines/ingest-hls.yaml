@@ -15,6 +15,13 @@ States:
         {% $states.result.Payload.flows %}
       multiFlows: >-
         {% $states.result.Payload.multiFlows %}
+    Retry:
+      - ErrorEquals:
+          - NoSuchKey
+          - HTTPError
+        IntervalSeconds: 10
+        MaxAttempts: 30
+        BackoffRate: 1.0
     Output: null
     Next: CreateFlows
   CreateFlows:
