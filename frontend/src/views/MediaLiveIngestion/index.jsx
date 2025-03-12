@@ -12,7 +12,7 @@ import {
   TextContent,
   TextFilter,
 } from "@cloudscape-design/components";
-import StartIngestModal from "@/components/StartIngestModal";
+import StartIngestElementalModal from "@/components/StartIngestElementalModal";
 import ConfirmationModal from "./components/ConfirmationModal";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useChannels } from "@/hooks/useChannels";
@@ -155,14 +155,12 @@ const MediaLiveIngestion = () => {
       {
         {
           ingest: (
-            <StartIngestModal
+            <StartIngestElementalModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
               source="medialive"
-              recordId={selectedItem?.id}
-              initialManifest={selectedItem?.manifestUri}
+              selectedItem={selectedItem}
               setSelectedItem={setSelectedItem}
-              readOnlyManifest={false}
             />
           ),
           start: (
