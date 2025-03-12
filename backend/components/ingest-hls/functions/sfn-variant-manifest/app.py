@@ -10,7 +10,6 @@ import m3u8
 import requests
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
-from botocore.exceptions import ClientError
 from ffprobe import ffprobe_link
 
 tracer = Tracer()
@@ -94,18 +93,13 @@ def get_file(source: str) -> bytes:
     source_parse = urlparse(source)
     match source_parse.scheme:
         case "s3":
-            try:
-                response = s3.get_object(
-                    Bucket=source_parse.netloc, Key=source_parse.path[1:]
-                )
-                return response["Body"].read()
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "NoSuchKey":
-                    return None
-                else:
-                    raise e
+            response = s3.get_object(
+                Bucket=source_parse.netloc, Key=source_parse.path[1:]
+            )
+            return response["Body"].read()
         case "https" | "http":
             response = requests.get(source, timeout=30)
+            response.raise_for_status()
             return response.content
 
 
@@ -290,16 +284,9 @@ def set_source_and_multi(label: str, description: str, flows: list) -> list:
 # pylint: disable=unused-argument
 def lambda_handler(event: dict, context: LambdaContext) -> dict:
     label = event["label"]
-    manifest_location = event["manifest_location"]
+    manifest_location = event["manifestLocation"]
     manifest_path = os.path.dirname(manifest_location)
     manifest = get_manifest(manifest_location)
-    if not manifest:
-        return {
-            "flows": [],
-            "multiFlows": [],
-            "flowManifests": [],
-        }
-    # Parse all playlists in manifest
     playlist_flows, playlist_flow_manifests, audio_codecs = process_playlists(
         manifest, manifest_path, label
     )
@@ -327,6 +314,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
         "flows": flows,
         "multiFlows": multi_flows,
         "flowManifests": [
-            {"id": flow_id, "uri": uri} for flow_id, uri in flow_manifests.items()
+            {"flowId": flow_id, "manifestLocation": uri}
+            for flow_id, uri in flow_manifests.items()
         ],
     }
