@@ -69,13 +69,12 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
             )
             last_timestamp = segment_end
             last_media_sequence = segment.media_sequence
-    response = {"segments": segments}
     # pylint: disable=no-member
     if manifest.is_endlist:
-        return response
+        return {"flowId": flow_id, "segments": segments}
     return {
-        **response,
         **event,
+        "segments": segments,
         "lastMediaSequence": last_media_sequence,
         "lastTimestamp": str(last_timestamp),
         "targetDuration": manifest.target_duration,

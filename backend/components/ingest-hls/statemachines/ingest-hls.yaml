@@ -56,6 +56,7 @@ States:
               IntervalSeconds: 1
               BackoffRate: 2
               MaxAttempts: 3
+          Output: null
           End: True
     Output: null
     Next: CreateMultiFlows
@@ -91,6 +92,7 @@ States:
               IntervalSeconds: 1
               BackoffRate: 2
               MaxAttempts: 3
+          Output: null
           End: True
     Output: null
     Next: ProcessMediaManifests
@@ -106,8 +108,32 @@ States:
       ProcessorConfig:
         Mode: DISTRIBUTED
         ExecutionType: STANDARD
-      StartAt: ProcessManifest
+      StartAt: TagFlowIngesting
       States:
+        TagFlowIngesting:
+          Type: Task
+          Resource: arn:aws:states:::http:invoke
+          Arguments:
+            Method: PUT
+            InvocationConfig:
+              ConnectionArn: ${ConnectionArn}
+            ApiEndpoint: >-
+              {% '${TamsEndpoint}/flows/' & $states.input.flowId & '/tags/flow_status' %}
+            Headers:
+              Content-Type: application/json
+            RequestBody: >-
+              {% '"ingesting"' %}
+          Retry:
+            - ErrorEquals:
+                - Events.ConnectionResource.InvalidConnectionState
+                - Events.ConnectionResource.AuthInProgress
+                - Events.ConnectionResource.ConcurrentModification
+              IntervalSeconds: 1
+              BackoffRate: 2
+              MaxAttempts: 3
+          Output: >-
+            {% $states.input %}
+          Next: ProcessManifest
         ProcessManifest:
           Type: Task
           Resource: arn:aws:states:::lambda:invoke
@@ -141,11 +167,14 @@ States:
                     {% $states.input %}
                 Output: null
                 End: True
-          Output: null
+          Output: >-
+            {% $states.input %}
           Next: CheckManifestLocation
         CheckManifestLocation:
           Type: Choice
-          Default: ExtXEndlist
+          Default: TagFlowClosedComplete
+          Output: >-
+            {% $states.input %}
           Choices:
             - Next: WaitTargetDuration
               Condition: >-
@@ -159,7 +188,29 @@ States:
           Output: >-
             {% $states.input %}
           Next: ProcessManifest
-        ExtXEndlist:
-          Type: Succeed
+        TagFlowClosedComplete:
+          Type: Task
+          Resource: arn:aws:states:::http:invoke
+          Arguments:
+            Method: PUT
+            InvocationConfig:
+              ConnectionArn: ${ConnectionArn}
+            ApiEndpoint: >-
+              {% '${TamsEndpoint}/flows/' & $states.input.flowId & '/tags/flow_status' %}
+            Headers:
+              Content-Type: application/json
+            RequestBody: >-
+              {% '"closed_complete"' %}
+          Retry:
+            - ErrorEquals:
+                - Events.ConnectionResource.InvalidConnectionState
+                - Events.ConnectionResource.AuthInProgress
+                - Events.ConnectionResource.ConcurrentModification
+              IntervalSeconds: 1
+              BackoffRate: 2
+              MaxAttempts: 3
+          Output: >-
+            {% $states.input %}
+          End: True
     Output: null
     End: True
