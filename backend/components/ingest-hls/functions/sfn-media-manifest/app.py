@@ -55,14 +55,14 @@ def send_message_batch(messages: list) -> None:
 @tracer.capture_lambda_handler(capture_response=False)
 # pylint: disable=unused-argument
 def lambda_handler(event: dict, context: LambdaContext) -> dict:
-    flow_id = event["flow_id"]
-    manifest_location = event["manifest_location"]
+    flow_id = event["flowId"]
+    manifest_location = event["manifestLocation"]
     manifest_path = os.path.dirname(manifest_location)
     manifest = get_manifest(manifest_location)
     if manifest.is_variant:
         raise ValueError("Not a media manifest")
-    last_media_sequence = event.get("last_media_sequence", 0)
-    last_timestamp = Timestamp.from_str(event.get("last_timestamp", "0:0"))
+    last_media_sequence = event.get("lastMediaSequence", 0)
+    last_timestamp = Timestamp.from_str(event.get("lastTimestamp", "0:0"))
     messages = []
     for segment in manifest.segments:
         if segment.media_sequence > last_media_sequence:
@@ -92,7 +92,8 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
     if not manifest.is_endlist:
         return {
             **event,
-            "last_media_sequence": last_media_sequence,
-            "last_timestamp": str(last_timestamp),
+            "lastMediaSequence": last_media_sequence,
+            "lastTimestamp": str(last_timestamp),
+            "targetDuration": manifest.target_duration,
         }
     return {}
