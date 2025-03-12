@@ -304,20 +304,11 @@ Resources:
                 - !GetAtt SfnVariantFunction.Arn
                 - !GetAtt SfnMediaFunction.Arn
                 - !GetAtt SfnSegmentIngestionFunction.Arn
-
-  HlsIngestRolePolicy:
-    Type: AWS::IAM::RolePolicy
-    Properties:
-      RoleName: !Ref IngestHlsRole
-      PolicyName: HlsIngest
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action:
-              - states:StartExecution
-            Resource:
-              - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${IngestHls.Name}
+            - Effect: Allow
+              Action:
+                - states:StartExecution
+              Resource:
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:IngestHls-*
 
   SfnSegmentIngestionFunction:
     Type: AWS::Serverless::Function
