@@ -96,13 +96,16 @@ States:
     Next: ProcessMediaManifests
   ProcessMediaManifests:
     Type: Map
+    Label: ProcessMediaManifests
+    MaxConcurrency: 1000
     Items: >-
       {% $flowManifests %}
     Assign:
       flowManifests: null
     ItemProcessor:
       ProcessorConfig:
-        Mode: INLINE
+        Mode: DISTRIBUTED
+        ExecutionType: STANDARD
       StartAt: ProcessManifest
       States:
         ProcessManifest:
@@ -114,6 +117,31 @@ States:
               {% $states.input %}
           Output: >-
             {% $states.result.Payload %}
+          Next: ProcessSegments
+        ProcessSegments:
+          Type: Map
+          Label: ProcessSegments
+          MaxConcurrency: 1000
+          ItemBatcher:
+            MaxItemsPerBatch: 10
+          Items: >-
+            {% $states.input.segments %}
+          ItemProcessor:
+            ProcessorConfig:
+              Mode: DISTRIBUTED
+              ExecutionType: STANDARD
+            StartAt: ProcessSegment
+            States:
+              ProcessSegment:
+                Type: Task
+                Resource: arn:aws:states:::lambda:invoke
+                Arguments:
+                  FunctionName: ${SegmentFunctionArn}
+                  Payload: >-
+                    {% $states.input %}
+                Output: null
+                End: True
+          Output: null
           Next: CheckManifestLocation
         CheckManifestLocation:
           Type: Choice

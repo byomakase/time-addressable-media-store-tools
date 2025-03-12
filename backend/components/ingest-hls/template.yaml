@@ -246,9 +246,6 @@ Resources:
       CodeUri: functions/sfn-media-manifest
       Layers:
         - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
-      Environment:
-        Variables:
-          QUEUE_URL: !Ref IngestJobQueue
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -261,11 +258,6 @@ Resources:
               Condition:
                 StringEquals:
                   s3:ResourceAccount: !Ref AWS::AccountId
-            - Effect: Allow
-              Action:
-                - sqs:SendMessage
-              Resource:
-                - !GetAtt IngestJobQueue.Arn
 
   IngestHls:
     Type: AWS::Serverless::StateMachine
@@ -276,6 +268,7 @@ Resources:
         ConnectionArn: !Ref TamsConnectionArn
         TamsEndpoint: !Ref ApiEndpoint
         MediaFunctionArn: !GetAtt SfnMediaFunction.Arn
+        SegmentFunctionArn: !GetAtt SfnSegmentIngestionFunction.Arn
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -310,8 +303,23 @@ Resources:
               Resource:
                 - !GetAtt SfnVariantFunction.Arn
                 - !GetAtt SfnMediaFunction.Arn
+                - !GetAtt SfnSegmentIngestionFunction.Arn
 
-  SqsIngestionFunction:
+  HlsIngestRolePolicy:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !Ref IngestHlsRole
+      PolicyName: HlsIngest
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - states:StartExecution
+            Resource:
+              - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${IngestHls.Name}
+
+  SfnSegmentIngestionFunction:
     Type: AWS::Serverless::Function
     Metadata:
       cfn_nag:
@@ -321,7 +329,7 @@ Resources:
           - id: W92
             reason: ReservedConcurrentExecutions not required
     Properties:
-      CodeUri: functions/sqs-ingestion
+      CodeUri: functions/sfn-segment-ingestion
       Layers:
         - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
         - !Ref OpenIdAuthLayerArn
@@ -347,24 +355,6 @@ Resources:
               Condition:
                 StringEquals:
                   s3:ResourceAccount: !Ref AWS::AccountId
-      Events:
-        SQSEvent:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt IngestJobQueue.Arn
-            BatchSize: 10
-            Enabled: True
-
-  IngestJobQueue:
-    Type: AWS::SQS::Queue
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W48
-            reason: Encryption not required
-    Properties:
-      VisibilityTimeout: 300
-      MessageRetentionPeriod: 86400
 
 Outputs:
   ApiEndpoint:

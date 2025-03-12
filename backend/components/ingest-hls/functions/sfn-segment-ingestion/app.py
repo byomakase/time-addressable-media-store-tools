@@ -89,8 +89,7 @@ def post_segment(flow_id: str, object_id: str, timerange: str) -> None:
 @tracer.capture_lambda_handler(capture_response=False)
 # pylint: disable=unused-argument
 def lambda_handler(event: dict, context: LambdaContext) -> dict:
-    for record in event["Records"]:
-        message = json.loads(record["body"])
-        flow_id = message["flow_id"]
-        object_id = upload_file(flow_id, get_file(message["uri"]))["object_id"]
-        post_segment(flow_id, object_id, message["timerange"])
+    for record in event["Items"]:
+        flow_id = record["flow_id"]
+        object_id = upload_file(flow_id, get_file(record["uri"]))["object_id"]
+        post_segment(flow_id, object_id, record["timerange"])
