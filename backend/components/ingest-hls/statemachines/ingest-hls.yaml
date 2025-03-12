@@ -110,11 +110,8 @@ States:
           Resource: arn:aws:states:::lambda:invoke
           Arguments:
             FunctionName: ${MediaFunctionArn}
-            Payload:
-              flow_id: >-
-                {% $states.input.id %}
-              manifest_location: >-
-                {% $states.input.uri %}
+            Payload: >-
+              {% $states.input %}
           Output: >-
             {% $states.result.Payload %}
           Next: CheckManifestLocation
@@ -122,11 +119,18 @@ States:
           Type: Choice
           Default: ExtXEndlist
           Choices:
-            - Next: ProcessManifest
+            - Next: WaitTargetDuration
               Condition: >-
-                {% $exists($states.input.manifest_location) %}
+                {% $exists($states.input.targetDuration) %}
               Output: >-
                 {% $states.input %}
+        WaitTargetDuration:
+          Type: Wait
+          Seconds: >-
+            {% $states.input.targetDuration %}
+          Output: >-
+            {% $states.input %}
+          Next: ProcessManifest
         ExtXEndlist:
           Type: Succeed
     Output: null
