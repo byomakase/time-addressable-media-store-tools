@@ -30,6 +30,20 @@ def get_containers_mappings() -> dict:
 
 
 @tracer.capture_method(capture_response=False)
+def map_container(probe: dict) -> str:
+    """Maps the format_name found from FFprobe to a TAMS container mime type"""
+    format_name = probe.get("format", {}).get("format_name", None)
+    if not format_name:
+        return "video/mp2t"
+    mappings = get_containers_mappings()
+    format_names = format_name.split(",")
+    mapped_formats = [mappings[f] for f in format_names if mappings.get(f)]
+    if not mapped_formats:
+        return f"unknown/{format_names[0]}"
+    return mapped_formats[0]
+
+
+@tracer.capture_method(capture_response=False)
 @lru_cache()
 def get_codec_mappings() -> dict:
     """Returns a dictionary of codec mappings from the parameter store"""
@@ -149,10 +163,6 @@ def process_playlists(
             else f"{manifest_path}/{playlist.uri}"
         )
         probe = get_manifest_segment_probe(flow_manifests[flow_id])
-        format_name = probe.get("format", {}).get("format_name", None)
-        container = (
-            get_containers_mappings()[format_name] if format_name else "video/mp2t"
-        )
         audio_group_id = next(
             (media.group_id for media in playlist.media if media.type == "AUDIO"),
             None,
@@ -167,7 +177,7 @@ def process_playlists(
             "label": label,
             "description": f"HLS Import ({os.path.basename(playlist.uri)})",
             "codec": tams_codecs[0][0],
-            "container": container,
+            "container": map_container(probe),
             "avg_bit_rate": playlist.stream_info.average_bandwidth,
             "max_bit_rate": playlist.stream_info.bandwidth,
         }
@@ -223,10 +233,6 @@ def process_media(
                 else f"{manifest_path}/{media.uri}"
             )
             probe = get_manifest_segment_probe(flow_manifests[flow_id])
-            format_name = probe.get("format", {}).get("format_name", None)
-            container = (
-                get_containers_mappings()[format_name] if format_name else "video/mp2t"
-            )
             audio_stream = next(
                 (
                     stream
@@ -241,7 +247,7 @@ def process_media(
                 "label": label,
                 "description": f"HLS Import ({os.path.basename(media.uri)})",
                 "codec": codec[0],
-                "container": container,
+                "container": map_container(probe),
                 "format": "urn:x-nmos:format:audio",
                 "essence_parameters": {
                     **codec[1],
