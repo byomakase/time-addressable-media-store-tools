@@ -22,18 +22,21 @@ const columnDefinitions = [
     cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
     sortingField: "id",
     isRowHeader: true,
+    width:310,
   },
   {
     id: "sourceTimerange",
     header: "Timerange",
     cell: (item) => item.sourceTimerange,
     sortingField: "sourceTimerange",
+    maxWidth: 160,
   },
   {
     id: "command",
     header: "FFmpeg Command",
     cell: (item) => item.ffmpeg?.command?.join(" "),
     sortingField: "command",
+    maxWidth: 200,
   },
   {
     id: "outputFormat",
@@ -48,6 +51,7 @@ const columnDefinitions = [
       <Link to={`/flows/${item.destinationFlow}`}>{item.destinationFlow}</Link>
     ),
     sortingField: "destinationFlow",
+    width:310,
   },
   {
     id: "status",
@@ -59,7 +63,7 @@ const columnDefinitions = [
         </StatusIndicator>
       ),
     sortingField: "Status",
-    minWidth: 80,
+    // minWidth: 80,
   },
   {
     id: "startDate",
@@ -155,6 +159,7 @@ const FfmpegJobs = () => {
       {...collectionProps}
       isItemDisabled={(item) => !item.Valid || loading}
       variant="borderless"
+      wrapLines
       loadingText="Loading resources"
       loading={isLoading}
       trackBy="key"
