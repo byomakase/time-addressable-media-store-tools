@@ -39,6 +39,7 @@ const EssenceParameters = ({ essenceParameters }) => {
           .filter((param) => Boolean(param.children))
           .map((param) => ({ key: param.key })),
       }}
+      contentDensity="compact"
       items={hierarchicalEssenceParameters}
       sortingDisabled
     />

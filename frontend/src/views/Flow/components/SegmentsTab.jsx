@@ -37,6 +37,7 @@ const SegmentsTab = ({ flowId }) => {
             cell: (item) => item.localeTimerange.end,
           },
         ]}
+        contentDensity="compact"
         items={
           segments &&
           segments.map((segment) => ({

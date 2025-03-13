@@ -26,7 +26,7 @@ const columnDefinitions = [
     cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
     sortingField: "id",
     isRowHeader: true,
-    minWidth: 340,
+    width: 310,
   },
   {
     id: "label",
@@ -39,14 +39,12 @@ const columnDefinitions = [
     header: "Description",
     cell: (item) => item.description,
     sortingField: "description",
-    minWidth: 240,
   },
   {
     id: "format",
     header: "Format",
     cell: (item) => item.format,
     sortingField: "format",
-    minWidth: 240,
   },
   {
     id: "created_by",
@@ -231,13 +229,6 @@ const Flows = () => {
   return (
     <>
       <Table
-        {...collectionProps}
-        variant="borderless"
-        resizableColumns
-        loadingText="Loading resources"
-        loading={isValidating || isLoading}
-        trackBy="id"
-        selectionType="multi"
         header={
           <Header
             actions={
@@ -299,8 +290,15 @@ const Flows = () => {
             Flows
           </Header>
         }
+        {...collectionProps}
+        variant="borderless"
+        loadingText="Loading resources"
+        loading={isValidating || isLoading}
+        trackBy="id"
+        selectionType="multi"
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
+        contentDensity="compact"
         items={items}
         pagination={<Pagination {...paginationProps} />}
         filter={<TextFilter {...filterProps} />}
