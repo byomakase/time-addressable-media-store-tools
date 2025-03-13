@@ -8,6 +8,7 @@ import {
   Table,
   TextContent,
 } from "@cloudscape-design/components";
+import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useDelete, useUpdate } from "@/hooks/useTags";
 
 import { useState } from "react";
@@ -47,52 +48,64 @@ const Tags = ({ id, entityType, tags }) => {
     setModalVisible(false);
   };
 
+  const columnDefinitions = [
+    {
+      id: "key",
+      header: "Key",
+      cell: (item) => item.key,
+      isRowHeader: true,
+      sortingField: "key",
+    },
+    {
+      id: "value",
+      header: "Value",
+      cell: (item) => item.value,
+      sortingField: "value",
+      editConfig: {
+        editingCell: (item, { currentValue, setValue }) => {
+          return (
+            <Input
+              autoFocus
+              value={currentValue ?? item.value}
+              onChange={({ detail }) => setValue(detail.value)}
+            />
+          );
+        },
+      },
+    },
+    {
+      id: "delete",
+      cell: (item) => (
+        <Button
+          iconName="remove"
+          variant="icon"
+          onClick={() => handleConfirmDelete(item.key)}
+        />
+      ),
+      width: 32,
+    },
+  ]
+
+  const { items, collectionProps } = useCollection(
+    tags ? Object.entries(tags).map((tag) => ({
+      key: tag[0],
+      value: tag[1],
+    })) : [],
+    {
+      sorting: {},
+    }
+  );
+
   return (
     <SpaceBetween size="xs">
       {tags ? (
         <Table
+          {...collectionProps}
           trackBy="key"
           variant="borderless"
-          columnDefinitions={[
-            {
-              id: "key",
-              header: "Key",
-              cell: (item) => item.key,
-              isRowHeader: true,
-            },
-            {
-              id: "value",
-              header: "Value",
-              cell: (item) => item.value,
-              editConfig: {
-                editingCell: (item, { currentValue, setValue }) => {
-                  return (
-                    <Input
-                      autoFocus
-                      value={currentValue ?? item.value}
-                      onChange={({ detail }) => setValue(detail.value)}
-                    />
-                  );
-                },
-              },
-            },
-            {
-              id: "delete",
-              cell: (item) => (
-                <Button
-                  iconName="delete-marker"
-                  variant="icon"
-                  onClick={() => handleConfirmDelete(item.key)}
-                />
-              ),
-              maxWidth: 32,
-            },
-          ]}
-          items={Object.entries(tags).map((tag) => ({
-            key: tag[0],
-            value: tag[1],
-          }))}
-          sortingDisabled
+          columnDefinitions={columnDefinitions}
+          contentDensity="compact"
+          items={items}
           submitEdit={(item, _, newValue) => updateTag(item.key, newValue)}
         />
       ) : (

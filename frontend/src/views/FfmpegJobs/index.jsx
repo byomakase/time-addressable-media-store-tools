@@ -166,6 +166,7 @@ const FfmpegJobs = () => {
       header={<Header>Jobs</Header>}
       columnDefinitions={columnDefinitions}
       columnDisplay={preferences.contentDisplay}
+      contentDensity="compact"
       items={items}
       pagination={<Pagination {...paginationProps} />}
       filter={<TextFilter {...filterProps} />}
