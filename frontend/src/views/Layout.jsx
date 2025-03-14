@@ -83,7 +83,7 @@ const Layout = () => {
                     items: [
                       {
                         type: "link",
-                        text: "HLS Ingestions",
+                        text: "HLS Ingests",
                         href: "/workflows",
                       },
                       {
