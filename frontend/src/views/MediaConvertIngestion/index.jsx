@@ -139,6 +139,7 @@ const MediaConvertIngestion = () => {
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
+        stickyColumns={{ first: 0, last: 1 }}
         items={items}
         pagination={<Pagination {...paginationProps} />}
         filter={<TextFilter {...filterProps} />}
