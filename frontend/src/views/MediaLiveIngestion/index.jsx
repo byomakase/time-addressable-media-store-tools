@@ -12,7 +12,7 @@ import {
   TextContent,
   TextFilter,
 } from "@cloudscape-design/components";
-import StartIngestElementalModal from "@/components/StartIngestElementalModal";
+import StartIngestModal from "./components/StartIngestModal";
 import ConfirmationModal from "./components/ConfirmationModal";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useChannels } from "@/hooks/useChannels";
@@ -108,21 +108,21 @@ const MediaLiveIngestion = () => {
               type: "icon-button",
               id: "ingest",
               iconName: "add-plus",
-              text: `Ingest ${item.id}`,
+              text: "Ingest HLS",
             },
             {
               type: "icon-button",
               id: "start",
               iconName: "play",
               disabled: item.state !== "IDLE",
-              text: `Start ${item.id}`,
+              text: "Start Channel",
             },
             {
               type: "icon-button",
               id: "stop",
               iconName: "pause",
               disabled: item.state !== "RUNNING",
-              text: `Stop ${item.id}`,
+              text: "Stop Channel",
             },
           ]}
           variant="icon"
@@ -145,10 +145,11 @@ const MediaLiveIngestion = () => {
         loadingText="Loading resources"
         loading={isLoading}
         trackBy="id"
-        header={<Header>Channels</Header>}
+        header={<Header>MediaConvert Channels</Header>}
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
+        stickyColumns={{ first: 0, last: 1 }}
         items={items}
         pagination={<Pagination {...paginationProps} />}
         filter={<TextFilter {...filterProps} />}
@@ -156,10 +157,9 @@ const MediaLiveIngestion = () => {
       {
         {
           ingest: (
-            <StartIngestElementalModal
+            <StartIngestModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              source="medialive"
               selectedItem={selectedItem}
               setSelectedItem={setSelectedItem}
             />

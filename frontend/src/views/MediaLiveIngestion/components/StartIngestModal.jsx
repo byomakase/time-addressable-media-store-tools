@@ -14,10 +14,9 @@ import { useStateMachine } from "@/hooks/useStateMachine";
 import useStore from "@/stores/useStore";
 import stringify from "json-stable-stringify";
 
-const StartIngestElementalModal = ({
+const StartIngestModal = ({
   modalVisible,
   setModalVisible,
-  source,
   selectedItem,
   setSelectedItem,
 }) => {
@@ -27,7 +26,7 @@ const StartIngestElementalModal = ({
   const delAlertItem = useStore((state) => state.delAlertItem);
 
   const performAction = async () => {
-    const id = `${source}-${selectedItem.id}-${Date.now()}`;
+    const id = `medialive-${selectedItem.id}-${Date.now()}`;
     await execute({
       stateMachineArn: AWS_HLS_INGEST_ARN,
       name: id,
@@ -90,6 +89,7 @@ const StartIngestElementalModal = ({
         <FormField
           description="The following manifest will be processed and ingested."
           label="Manifest URI"
+          warningText={selectedItem.manifestExists && "This content already exists. You can proceed with the ingest job if you wish. The warning is provided in case you expected to process new content instead of existing."}
         >
           <Textarea
             value={selectedItem?.manifestUri}
@@ -113,4 +113,4 @@ const StartIngestElementalModal = ({
   );
 };
 
-export default StartIngestElementalModal;
+export default StartIngestModal;
