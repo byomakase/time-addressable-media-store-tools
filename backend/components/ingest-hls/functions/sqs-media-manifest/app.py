@@ -84,17 +84,18 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
                         timerange = TimeRange(
                             segment_start, segment_end, TimeRange.INCLUDE_START
                         )
-                        segments.append(
-                            {
-                                "flowId": flow_id,
-                                "timerange": str(timerange),
-                                "uri": (
-                                    segment.uri
-                                    if segment.uri.startswith("http")
-                                    else f"{manifest_path}/{segment.uri}"
-                                ),
-                            }
-                        )
+                        segment_dict = {
+                            "flowId": flow_id,
+                            "timerange": str(timerange),
+                            "uri": (
+                                segment.uri
+                                if segment.uri.startswith("http")
+                                else f"{manifest_path}/{segment.uri}"
+                            ),
+                        }
+                        if segment.byterange:
+                            segment_dict["byterange"] = segment.byterange
+                        segments.append(segment_dict)
                         last_timestamp = segment_end
                         last_media_sequence = segment.media_sequence
                         if len(segments) == 10:
