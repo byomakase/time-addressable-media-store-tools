@@ -23,17 +23,25 @@ creds = Credentials(
 
 
 @tracer.capture_method(capture_response=False)
-def get_file(source: str) -> bytes:
+def get_file(source: str, byterange: str | None) -> bytes:
     """Reads the content of a file from the supplied source uri"""
     source_parse = urlparse(source)
+    if byterange:
+        byterange_len, byterange_start = map(int, byterange.split("@"))
+        range_string = f"{byterange_start}-{byterange_start + byterange_len}"
     match source_parse.scheme:
         case "s3":
-            response = s3.get_object(
-                Bucket=source_parse.netloc, Key=source_parse.path[1:]
-            )
+            params = {
+                "Bucket": source_parse.netloc,
+                "Key": source_parse.path[1:],
+            }
+            if byterange:
+                params["Range"] = range_string
+            response = s3.get_object(**params)
             return response["Body"].read()
         case "https" | "http":
-            response = requests.get(source, timeout=30)
+            headers = {"Range": f"bytes={range_string}"} if byterange else None
+            response = requests.get(source, headers=headers, timeout=30)
             return response.content
 
 
@@ -106,7 +114,9 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
         if record.get("eventSource", "") == "aws:sqs":
             message = json.loads(record["body"])
             flow_id = message["flowId"]
-            object_id = upload_file(flow_id, get_file(message["uri"]))["object_id"]
+            object_id = upload_file(
+                flow_id, get_file(message["uri"], message.get("byterange", None))
+            )["object_id"]
             post_segment(flow_id, object_id, message["timerange"])
             if message.get("deleteSource", False):
                 delete_s3_file(record["uri"])
