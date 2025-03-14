@@ -89,7 +89,7 @@ const StartIngestModal = ({
         <FormField
           description="The following manifest will be processed and ingested."
           label="Manifest URI"
-          warningText={selectedItem.manifestExists && "This content already exists. You can proceed with the ingest job if you wish. The warning is provided in case you expected to process new content instead of existing."}
+          warningText={selectedItem.manifestExists && "Content already exists in this location.  Starting ingest now will ingest this into TAMS.  If you are setting up a new ingest process then you may wish to delete the existing content before starting the ingest process."}
         >
           <Textarea
             value={selectedItem?.manifestUri}
