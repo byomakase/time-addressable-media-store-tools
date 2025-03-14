@@ -25,6 +25,15 @@ Parameters:
   TamsConnectionArn:
     Type: String
 
+  SqsSegmentIngestFunctionArn:
+    Type: String
+
+  SegmentIngestQueueUrl:
+    Type: String
+
+  SegmentIngestQueueArn:
+    Type: String
+
 Transform: AWS::Serverless-2016-10-31
 
 Globals:
@@ -231,7 +240,7 @@ Resources:
                 StringEquals:
                   s3:ResourceAccount: !Ref AWS::AccountId
 
-  SfnMediaFunction:
+  SqsMediaFunction:
     Type: AWS::Serverless::Function
     Metadata:
       cfn_nag:
@@ -243,9 +252,14 @@ Resources:
     Properties:
       Timeout: 300
       MemorySize: 1024
-      CodeUri: functions/sfn-media-manifest
+      CodeUri: functions/sqs-media-manifest
+      RecursiveLoop: Allow
       Layers:
         - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+      Environment:
+        Variables:
+          MANIFEST_QUEUE_URL: !Ref MediaManifestQueue
+          INGEST_QUEUE_URL: !Ref SegmentIngestQueueUrl
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -258,6 +272,26 @@ Resources:
               Condition:
                 StringEquals:
                   s3:ResourceAccount: !Ref AWS::AccountId
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource:
+                - !Ref SegmentIngestQueueArn
+                - !GetAtt MediaManifestQueue.Arn
+            - Effect: Allow
+              Action:
+                - states:SendTaskSuccess
+                - states:SendTaskFailure
+                - states:SendTaskHeartbeat
+              Resource:
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${IngestHls.Name}
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt MediaManifestQueue.Arn
+            BatchSize: 1
+            Enabled: True
 
   IngestHls:
     Type: AWS::Serverless::StateMachine
@@ -267,8 +301,7 @@ Resources:
         VariantFunctionArn: !GetAtt SfnVariantFunction.Arn
         ConnectionArn: !Ref TamsConnectionArn
         TamsEndpoint: !Ref ApiEndpoint
-        MediaFunctionArn: !GetAtt SfnMediaFunction.Arn
-        SegmentFunctionArn: !GetAtt SfnSegmentIngestionFunction.Arn
+        MediaManifestQueueUrl: !Ref MediaManifestQueue
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -302,50 +335,22 @@ Resources:
                 - lambda:InvokeFunction
               Resource:
                 - !GetAtt SfnVariantFunction.Arn
-                - !GetAtt SfnMediaFunction.Arn
-                - !GetAtt SfnSegmentIngestionFunction.Arn
             - Effect: Allow
               Action:
-                - states:StartExecution
+                - sqs:SendMessage
               Resource:
-                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:IngestHls-*
+                - !GetAtt MediaManifestQueue.Arn
 
-  SfnSegmentIngestionFunction:
-    Type: AWS::Serverless::Function
+  MediaManifestQueue:
+    Type: AWS::SQS::Queue
     Metadata:
       cfn_nag:
         rules_to_suppress:
-          - id: W89
-            reason: VPC not required
-          - id: W92
-            reason: ReservedConcurrentExecutions not required
+          - id: W48
+            reason: Encryption not required
     Properties:
-      CodeUri: functions/sfn-segment-ingestion
-      Layers:
-        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
-        - !Ref OpenIdAuthLayerArn
-      Environment:
-        Variables:
-          TAMS_ENDPOINT: !Ref ApiEndpoint
-          TOKEN_URL: !Ref TokenUrl
-          USER_POOL_ID: !Ref UserPoolId
-          CLIENT_ID: !Ref UserPoolClientId
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - cognito-idp:DescribeUserPoolClient
-              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
-            - Effect: Allow
-              Action:
-                - s3:ListBucket
-                - s3:GetObject
-              Resource:
-                - !Sub arn:${AWS::Partition}:s3:::*
-              Condition:
-                StringEquals:
-                  s3:ResourceAccount: !Ref AWS::AccountId
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 86400
 
 Outputs:
   ApiEndpoint:

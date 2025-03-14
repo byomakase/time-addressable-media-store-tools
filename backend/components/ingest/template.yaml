@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  UserPoolId:
+    Type: String
+
+  ApiEndpoint:
+    Type: String
+
+  UserPoolClientId:
+    Type: String
+
+  TokenUrl:
+    Type: String
+
+  OpenIdAuthLayerArn:
+    Type: String
+
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Tracing: Active
+    Timeout: 300
+    MemorySize: 128
+    Handler: app.lambda_handler
+    Runtime: python3.13
+    Architectures:
+      - arm64
+
+Resources:
+  SqsSegmentIngestionFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+    Properties:
+      CodeUri: functions/sqs-segment-ingestion
+      Layers:
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+        - !Ref OpenIdAuthLayerArn
+      Environment:
+        Variables:
+          TAMS_ENDPOINT: !Ref ApiEndpoint
+          TOKEN_URL: !Ref TokenUrl
+          USER_POOL_ID: !Ref UserPoolId
+          CLIENT_ID: !Ref UserPoolClientId
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:DescribeUserPoolClient
+              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+            - Effect: Allow
+              Action:
+                - s3:ListBucket
+                - s3:GetObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::*
+              Condition:
+                StringEquals:
+                  s3:ResourceAccount: !Ref AWS::AccountId
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SegmentIngestQueue.Arn
+            BatchSize: 1
+            Enabled: True
+
+  SegmentIngestQueue:
+    Type: AWS::SQS::Queue
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W48
+            reason: Encryption not required
+    Properties:
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 86400
+
+Outputs:
+  SqsSegmentIngestFunctionArn:
+    Value: !GetAtt SqsSegmentIngestionFunction.Arn
+
+  SqsSegmentIngestionFunctionRoleName:
+    Value: !Ref SqsSegmentIngestionFunctionRole
+
+  SegmentIngestQueueUrl:
+    Value: !Ref SegmentIngestQueue
+
+  SegmentIngestQueueArn:
+    Value: !GetAtt SegmentIngestQueue.Arn

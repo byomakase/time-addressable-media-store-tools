@@ -6,6 +6,7 @@ import boto3
 import requests
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
+from botocore.exceptions import ClientError
 from openid_auth import Credentials
 
 tracer = Tracer()
@@ -85,11 +86,27 @@ def post_segment(flow_id: str, object_id: str, timerange: str) -> None:
     logger.info(f"Response status: {response.status_code}")
 
 
+@tracer.capture_method(capture_response=False)
+def delete_s3_file(source: str) -> None:
+    """Attempts to delete the S3 file using the supplied source uri, logs error without raising if unable to do so."""
+    source_parse = urlparse(source)
+    match source_parse.scheme:
+        case "s3":
+            try:
+                s3.delete_object(Bucket=source_parse.netloc, Key=source_parse.path[1:])
+            except ClientError as ex:
+                logger.error(ex)
+
+
 @logger.inject_lambda_context(log_event=True)
 @tracer.capture_lambda_handler(capture_response=False)
 # pylint: disable=unused-argument
 def lambda_handler(event: dict, context: LambdaContext) -> dict:
-    for record in event["Items"]:
-        flow_id = record["flow_id"]
-        object_id = upload_file(flow_id, get_file(record["uri"]))["object_id"]
-        post_segment(flow_id, object_id, record["timerange"])
+    for record in event.get("Records", []):
+        if record.get("eventSource", "") == "aws:sqs":
+            message = json.loads(record["body"])
+            flow_id = message["flowId"]
+            object_id = upload_file(flow_id, get_file(message["uri"]))["object_id"]
+            post_segment(flow_id, object_id, message["timerange"])
+            if message.get("deleteSource", False):
+                delete_s3_file(record["uri"])

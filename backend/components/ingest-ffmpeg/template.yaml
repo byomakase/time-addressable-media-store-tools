@@ -22,6 +22,15 @@ Parameters:
   TamsConnectionArn:
     Type: String
 
+  SqsSegmentIngestionFunctionRoleName:
+    Type: String
+
+  SegmentIngestQueueUrl:
+    Type: String
+
+  SegmentIngestQueueArn:
+    Type: String
+
 Transform: AWS::Serverless-2016-10-31
 
 Globals:
@@ -200,6 +209,20 @@ Resources:
         EventBridgeConfiguration:
           EventBridgeEnabled: True
 
+  SegmentIngestionPolicyFFmpeg:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !Ref SqsSegmentIngestionFunctionRoleName
+      PolicyName: FFmpegIngest
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:DeleteObject
+            Resource:
+              - !Sub ${FFmpegBucket.Arn}/ffmpeg/*
+
   FFmpegJobQueue:
     Type: AWS::SQS::Queue
     Metadata:
@@ -278,7 +301,8 @@ Resources:
       PackageType: Image
       Environment:
         Variables:
-          QUEUE_URL: !Ref FFmpegJobQueue
+          FFMPEG_QUEUE_URL: !Ref FFmpegJobQueue
+          INGEST_QUEUE_URL: !Ref SegmentIngestQueueUrl
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -288,6 +312,11 @@ Resources:
                 - sqs:DeleteMessage
               Resource:
                 - !GetAtt FFmpegJobQueue.Arn
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource:
+                - !Ref SegmentIngestQueueArn
             - Effect: Allow
               Action:
                 - s3:GetObject
@@ -304,7 +333,7 @@ Resources:
           Properties:
             Queue: !GetAtt FFmpegJobQueue.Arn
             BatchSize: 1
-            Enabled: False
+            Enabled: True
 
   FfmpegBatch:
     Type: AWS::Serverless::StateMachine
@@ -351,72 +380,15 @@ Resources:
               Resource:
                 - !GetAtt FFmpegJobQueue.Arn
 
-  S3IngestionFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W89
-            reason: VPC not required
-          - id: W92
-            reason: ReservedConcurrentExecutions not required
-    Properties:
-      Timeout: 30
-      MemorySize: 128
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      CodeUri: functions/s3-ingestion
-      Layers:
-        - !Ref OpenIdAuthLayerArn
-      Environment:
-        Variables:
-          TAMS_ENDPOINT: !Ref ApiEndpoint
-          TOKEN_URL: !Ref TokenUrl
-          USER_POOL_ID: !Ref UserPoolId
-          CLIENT_ID: !Ref UserPoolClientId
-          FFMPEG_BUCKET: !Ref FFmpegBucket
-          FFMPEG_PREFIX: ffmpeg/
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - cognito-idp:DescribeUserPoolClient
-              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
-            - Effect: Allow
-              Action:
-                - ssm:GetParameter
-                - ssm:PutParameter
-              Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:DeleteObject
-              Resource:
-                - !Sub ${FFmpegBucket.Arn}/ffmpeg/*
-      Events:
-        EBRule:
-          Type: EventBridgeRule
-          Properties:
-            Pattern:
-              source:
-                - aws.s3
-              detail-type:
-                - Object Created
-              detail:
-                bucket:
-                  name:
-                    - !Ref FFmpegBucket
-                object:
-                  key:
-                    - prefix: ffmpeg/
-
 Outputs:
   ApiEndpoint:
     Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com
 
   ParameterName:
     Value: !Ref FfmpegCommandsParameter
+
+  BucketName:
+    Value: !Ref FFmpegBucket
 
   FfmpegBatchArn:
     Value: !Ref FfmpegBatch
