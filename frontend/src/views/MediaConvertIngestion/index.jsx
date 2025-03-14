@@ -15,7 +15,7 @@ import {
   TextContent,
   TextFilter,
 } from "@cloudscape-design/components";
-import StartIngestElementalModal from "@/components/StartIngestElementalModal";
+import StartIngestModal from "./components/StartIngestModal";
 
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import useJobs from "@/hooks/useJobs";
@@ -71,7 +71,7 @@ const MediaConvertIngestion = () => {
       id: "input",
       header: "First Input File Name",
       cell: (item) =>
-        item.manifestUri ? (
+        item.manifestExists ? (
           <Popover
             dismissButton={false}
             position="top"
@@ -113,7 +113,7 @@ const MediaConvertIngestion = () => {
               id: "ingest",
               iconName: "add-plus",
               text: `Ingest ${item.id}`,
-              disabled: !item.manifestUri,
+              disabled: !item.manifestExists,
             },
           ]}
           variant="icon"
@@ -143,10 +143,9 @@ const MediaConvertIngestion = () => {
         pagination={<Pagination {...paginationProps} />}
         filter={<TextFilter {...filterProps} />}
       />
-      <StartIngestElementalModal
+      <StartIngestModal
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
-        source="mediaconvert"
         selectedItem={selectedItem}
         setSelectedItem={setSelectedItem}
       />
