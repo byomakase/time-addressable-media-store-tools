@@ -98,16 +98,13 @@ States:
     Next: ProcessMediaManifests
   ProcessMediaManifests:
     Type: Map
-    Label: ProcessMediaManifests
-    MaxConcurrency: 1000
     Items: >-
       {% $flowManifests %}
     Assign:
       flowManifests: null
     ItemProcessor:
       ProcessorConfig:
-        Mode: DISTRIBUTED
-        ExecutionType: STANDARD
+        Mode: INLINE
       StartAt: TagFlowIngesting
       States:
         TagFlowIngesting:
@@ -136,58 +133,20 @@ States:
           Next: ProcessManifest
         ProcessManifest:
           Type: Task
-          Resource: arn:aws:states:::lambda:invoke
+          Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+          HeartbeatSeconds: 900
           Arguments:
-            FunctionName: ${MediaFunctionArn}
-            Payload: >-
+            MessageBody: >-
               {% $states.input %}
-          Output: >-
-            {% $states.result.Payload %}
-          Next: ProcessSegments
-        ProcessSegments:
-          Type: Map
-          Label: ProcessSegments
-          MaxConcurrency: 1000
-          ItemBatcher:
-            MaxItemsPerBatch: 10
-          Items: >-
-            {% $states.input.segments %}
-          ItemProcessor:
-            ProcessorConfig:
-              Mode: DISTRIBUTED
-              ExecutionType: STANDARD
-            StartAt: ProcessSegment
-            States:
-              ProcessSegment:
-                Type: Task
-                Resource: arn:aws:states:::lambda:invoke
-                Arguments:
-                  FunctionName: ${SegmentFunctionArn}
-                  Payload: >-
-                    {% $states.input %}
-                Output: null
-                End: True
+            MessageAttributes:
+              TaskToken:
+                DataType: String
+                StringValue: >-
+                  {% $states.context.Task.Token %}
+            QueueUrl: ${MediaManifestQueueUrl}
           Output: >-
             {% $states.input %}
-          Next: CheckManifestLocation
-        CheckManifestLocation:
-          Type: Choice
-          Default: TagFlowClosedComplete
-          Output: >-
-            {% $states.input %}
-          Choices:
-            - Next: WaitTargetDuration
-              Condition: >-
-                {% $exists($states.input.targetDuration) %}
-              Output: >-
-                {% $states.input %}
-        WaitTargetDuration:
-          Type: Wait
-          Seconds: >-
-            {% $states.input.targetDuration %}
-          Output: >-
-            {% $states.input %}
-          Next: ProcessManifest
+          Next: TagFlowClosedComplete
         TagFlowClosedComplete:
           Type: Task
           Resource: arn:aws:states:::http:invoke

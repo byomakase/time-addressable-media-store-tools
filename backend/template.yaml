@@ -57,7 +57,7 @@ Conditions:
 
   DeployHls: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls]
 
-  DeployApi: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls, !Condition DeployIngestFfmpeg]
+  DeployIngest: !Or [!Condition DeployIngestHls, !Condition DeployIngestFfmpeg]
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -97,7 +97,6 @@ Resources:
         - python3.13
       CompatibleArchitectures:
         - arm64
-    Condition: DeployApi
 
   CustomResourceFunction:
     Type: AWS::Serverless::Function
@@ -136,26 +135,6 @@ Resources:
       ClientId: !ImportValue
         Fn::Sub: ${ApiStackName}-UserPoolClientId
 
-  CodecsParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub ${AWS::StackName}-codecs
-      Type: String
-      DataType: text
-      Description: Codec mappings for HLS
-      Value: |
-        [
-          {
-            "tams": "audio/aac",
-            "hls": "mp4a"
-          },
-          {
-            "tams": "video/h264",
-            "hls": "avc1"
-          }
-        ]
-    Condition: DeployHls
-
   TamsConnection:
     Type: AWS::Events::Connection
     Properties:
@@ -178,6 +157,26 @@ Resources:
                 Value: client_credentials
                 IsValueSecret: False
 
+  CodecsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AWS::StackName}-codecs
+      Type: String
+      DataType: text
+      Description: Codec mappings for HLS
+      Value: |
+        [
+          {
+            "tams": "audio/aac",
+            "hls": "mp4a"
+          },
+          {
+            "tams": "video/h264",
+            "hls": "avc1"
+          }
+        ]
+    Condition: DeployHls
+
   HlsApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -197,6 +196,22 @@ Resources:
         CodecsParameterName: !Ref CodecsParameter
     Condition: DeployHlsApi
 
+  IngestStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/ingest/template.yaml
+      Parameters:
+        UserPoolId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolId
+        ApiEndpoint: !ImportValue
+          Fn::Sub: ${ApiStackName}-ApiEndpoint
+        UserPoolClientId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolClientId
+        TokenUrl: !ImportValue
+          Fn::Sub: ${ApiStackName}-TokenUrl
+        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+    Condition: DeployIngest
+
   IngestHlsStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -215,6 +230,9 @@ Resources:
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
         CodecsParameterName: !Ref CodecsParameter
         TamsConnectionArn: !GetAtt TamsConnection.Arn
+        SqsSegmentIngestFunctionArn: !GetAtt IngestStack.Outputs.SqsSegmentIngestFunctionArn
+        SegmentIngestQueueUrl: !GetAtt IngestStack.Outputs.SegmentIngestQueueUrl
+        SegmentIngestQueueArn: !GetAtt IngestStack.Outputs.SegmentIngestQueueArn
     Condition: DeployIngestHls
 
   IngestFfmpegStack:
@@ -234,6 +252,9 @@ Resources:
           Fn::Sub: ${ApiStackName}-AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
         TamsConnectionArn: !GetAtt TamsConnection.Arn
+        SqsSegmentIngestionFunctionRoleName: !GetAtt IngestStack.Outputs.SqsSegmentIngestionFunctionRoleName
+        SegmentIngestQueueUrl: !GetAtt IngestStack.Outputs.SegmentIngestQueueUrl
+        SegmentIngestQueueArn: !GetAtt IngestStack.Outputs.SegmentIngestQueueArn
     Condition: DeployIngestFfmpeg
 
 Outputs:
