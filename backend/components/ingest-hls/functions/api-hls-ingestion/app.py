@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from urllib.parse import urlparse
 
 import boto3
@@ -33,36 +34,18 @@ def find_key_with_s3_value(obj, key):
 
 
 @tracer.capture_method(capture_response=False)
-def get_variant_manifest_uri(uri):
+def manifest_exists(uri):
     try:
         uri_parse = urlparse(uri)
-        list_objects = s3.list_objects_v2(
+        s3.head_object(
             Bucket=uri_parse.netloc,
-            Prefix=uri_parse.path[1:],
+            Key=uri_parse.path[1:],
         )
-        m3u8_files = [
-            f's3://{uri_parse.netloc}/{obj["Key"]}'
-            for obj in list_objects.get("Contents", [])
-            if obj["Key"].endswith(".m3u8")
-        ]
-        while list_objects["IsTruncated"]:
-            list_objects = s3.list_objects_v2(
-                Bucket=uri_parse.netloc,
-                Prefix=uri_parse.path[1:],
-                ContinuationToken=list_objects["NextContinuationToken"],
-            )
-            m3u8_files.extend(
-                [
-                    f's3://{uri_parse.netloc}/{obj["Key"]}'
-                    for obj in list_objects.get("Contents", [])
-                    if obj["Key"].endswith(".m3u8")
-                ]
-            )
-        m3u8_files.sort(key=len)
-        return m3u8_files[0] if m3u8_files else None
+        return True
     except ClientError as ex:
-        logger.error(ex)
-        return None
+        if ex.response["Error"]["Code"] == "404":
+            return False
+        raise ex
 
 
 @app.get("/job-ingestion")
@@ -76,12 +59,14 @@ def get_job_ingestions():
                 job.get("Settings", {}).get("Inputs", [{}])[0].get("FileInput", "")
             )
             destination_location = next(find_key_with_s3_value(job, "Destination"))
-            manifest_uri = get_variant_manifest_uri(destination_location)
+            input_file = os.path.basename(first_input)
+            manifest_uri = f"{destination_location}{Path(input_file).stem}.m3u8"
             jobs.append(
                 {
                     "id": job["Id"],
-                    "fileName": os.path.basename(first_input),
+                    "fileName": input_file,
                     "manifestUri": manifest_uri,
+                    "manifestExists": manifest_exists(manifest_uri),
                     "status": job["Status"],
                     "JobPercentComplete": job.get("JobPercentComplete", None),
                 }
@@ -97,12 +82,13 @@ def get_channel_ingestions():
     for page in paginator.paginate():
         for channel in page["Channels"]:
             destination_location = next(find_key_with_s3_value(channel, "Url"))
-            manifest_uri = get_variant_manifest_uri(destination_location)
+            manifest_uri = f"{destination_location}.m3u8"
             channels.append(
                 {
                     "id": channel["Id"],
                     "name": channel["Name"],
-                    "manifestUri": manifest_uri or f"{destination_location}.m3u8",
+                    "manifestUri": manifest_uri,
+                    "manifestExists": manifest_exists(manifest_uri),
                     "state": channel["State"],
                 }
             )
