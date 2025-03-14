@@ -34,7 +34,7 @@ const HlsIngestion = () => {
       filtering: {
         empty: (
           <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No ingestions</b>
+            <b>No ingests</b>
           </Box>
         ),
         noMatch: (
@@ -104,11 +104,11 @@ const HlsIngestion = () => {
           <Header
             actions={
               <Button variant="primary" onClick={() => setModalVisible(true)}>
-                New Ingestion
+                New Ingest Job
               </Button>
             }
           >
-            Ingestions
+            Ingest Jobs
           </Header>
         }
         columnDefinitions={columnDefinitions}
