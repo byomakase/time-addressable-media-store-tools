@@ -8,7 +8,8 @@ from urllib.parse import urlparse
 import boto3
 import m3u8
 import requests
-from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools import Logger, Tracer, single_metric
+from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from ffprobe import ffprobe_link
 
@@ -39,6 +40,10 @@ def map_container(probe: dict) -> str:
     format_names = format_name.split(",")
     mapped_formats = [mappings[f] for f in format_names if mappings.get(f)]
     if not mapped_formats:
+        with single_metric(
+            name="ContainerMappingMiss", unit=MetricUnit.Count, value=1
+        ) as metric:
+            metric.add_dimension(name="format_name", value=format_name)
         return f"unknown/{format_names[0]}"
     return mapped_formats[0]
 
@@ -60,6 +65,11 @@ def map_codec(hls_codec: str) -> tuple[str, dict]:
         hls_codec.split(".", 1) if "." in hls_codec else (hls_codec, "")
     )
     codec_mappings = get_codec_mappings()
+    if not codec_mappings.get(codec):
+        with single_metric(
+            name="CodecMappingMiss", unit=MetricUnit.Count, value=1
+        ) as metric:
+            metric.add_dimension(name="codec", value=codec)
     mapped_codec = codec_mappings.get(codec, f"unknown/{codec}")
     essence_parameter_handlers = {
         "avc1": get_avc1_essence_parameters,
