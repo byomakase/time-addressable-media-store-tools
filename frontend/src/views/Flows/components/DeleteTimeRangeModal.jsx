@@ -15,7 +15,6 @@ const DeleteTimeRangeModal = ({
   modalVisible,
   setModalVisible,
   selectedItems,
-  setSelectedItems,
 }) => {
   const { delTimerange, isDeletingTimerange } = useDeleteTimerange();
   const addAlertItems = useStore((state) => state.addAlertItems);
@@ -45,7 +44,6 @@ const DeleteTimeRangeModal = ({
     await Promise.all(promises);
     setModalVisible(false);
     setTimerange("");
-    setSelectedItems([]);
   };
 
   const handleDismiss = () => {

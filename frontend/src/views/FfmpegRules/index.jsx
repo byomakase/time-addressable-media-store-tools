@@ -61,7 +61,6 @@ const FfmpegRules = () => {
             onClick={() => handleDeleteRule(item.key)}
           />
         ),
-      maxWidth: 30,
     },
   ];
 
@@ -103,6 +102,7 @@ const FfmpegRules = () => {
         trackBy="key"
         header={<Header>Rules</Header>}
         columnDefinitions={columnDefinitions}
+        stickyColumns={{ first: 0, last: 1 }}
         items={items}
         isItemDisabled={(item) => !item.parentId}
         pagination={<Pagination {...paginationProps} />}

@@ -114,9 +114,11 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
         if record.get("eventSource", "") == "aws:sqs":
             message = json.loads(record["body"])
             flow_id = message["flowId"]
-            object_id = upload_file(
+            media_object = upload_file(
                 flow_id, get_file(message["uri"], message.get("byterange", None))
-            )["object_id"]
-            post_segment(flow_id, object_id, message["timerange"])
+            )
+            if media_object["put_url"]["content-type"].split("/")[0] == "image":
+                message["timerange"] = f'{message["timerange"].split("_")[0]}]'
+            post_segment(flow_id, media_object["object_id"], message["timerange"])
             if message.get("deleteSource", False):
                 delete_s3_file(record["uri"])

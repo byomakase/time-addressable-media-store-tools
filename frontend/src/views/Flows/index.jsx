@@ -169,6 +169,8 @@ const collectionPreferencesProps = {
 const Flows = () => {
   const { flows, mutate, isLoading, isValidating } = useFlows();
   const [showHierarchy, setShowHierarchy] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [actionId, setActionId] = useState("");
   const [preferences, setPreferences] = useState({
     pageSize: 10,
     contentDisplay: [
@@ -194,8 +196,6 @@ const Flows = () => {
       { id: "max_bit_rate", visible: false },
     ],
   });
-  const [modalVisible, setModalVisible] = useState(false);
-  const [actionId, setActionId] = useState("");
   const { items, collectionProps, filterProps, paginationProps, actions } =
     useCollection(isValidating || isLoading ? [] : flows, {
       expandableRows: showHierarchy && {
@@ -253,22 +253,25 @@ const Flows = () => {
                       id: "timerange",
                       disabled: !(selectedItems.length > 0),
                     },
-                    AWS_FFMPEG_ENDPOINT ? {
-                      text: "FFmpeg",
-                      id: "ffmpeg",
-                      disabled: !(selectedItems.length === 1),
-                      disabledReason: "Select only one Flow for this action.",
-                      items: [
-                        {
-                          text: "Create FFmpeg Rule",
-                          id: "create-rule",
-                        },
-                        {
-                          text: "Create FFmpeg Job",
-                          id: "create-job",
-                        },
-                      ],
-                    } : {},
+                    AWS_FFMPEG_ENDPOINT
+                      ? {
+                          text: "FFmpeg",
+                          id: "ffmpeg",
+                          disabled: !(selectedItems.length === 1),
+                          disabledReason:
+                            "Select only one Flow for this action.",
+                          items: [
+                            {
+                              text: "Create FFmpeg Rule",
+                              id: "create-rule",
+                            },
+                            {
+                              text: "Create FFmpeg Job",
+                              id: "create-job",
+                            },
+                          ],
+                        }
+                      : {},
                   ]}
                 >
                   Actions
@@ -318,7 +321,7 @@ const Flows = () => {
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
               selectedItems={selectedItems}
-              setSelectedItems={setSelectedItems}
+              mutateFlows={mutate}
             />
           ),
           timerange: (
@@ -326,7 +329,6 @@ const Flows = () => {
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
               selectedItems={selectedItems}
-              setSelectedItems={setSelectedItems}
             />
           ),
           "create-rule": (
@@ -336,17 +338,7 @@ const Flows = () => {
               selectedFlowId={
                 selectedItems.length > 0 ? selectedItems[0].id : ""
               }
-              setSelectedItems={setSelectedItems}
-              flowIds={
-                isValidating || isLoading
-                  ? []
-                  : flows
-                      .filter((flow) => !selectedItems.includes(flow))
-                      .map((flow) => ({
-                        label: flow.description,
-                        value: flow.id,
-                      }))
-              }
+              mutateFlows={mutate}
             />
           ),
           "create-job": (
@@ -356,17 +348,7 @@ const Flows = () => {
               selectedFlowId={
                 selectedItems.length > 0 ? selectedItems[0].id : ""
               }
-              setSelectedItems={setSelectedItems}
-              flowIds={
-                isValidating || isLoading
-                  ? []
-                  : flows
-                      .filter((flow) => !selectedItems.includes(flow))
-                      .map((flow) => ({
-                        label: flow.description,
-                        value: flow.id,
-                      }))
-              }
+              mutateFlows={mutate}
             />
           ),
         }[actionId]
