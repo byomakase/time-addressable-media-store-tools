@@ -1,3 +1,4 @@
+import { AWS_FFMPEG_ENDPOINT } from "@/constants";
 import {
   Box,
   Button,
@@ -252,7 +253,7 @@ const Flows = () => {
                       id: "timerange",
                       disabled: !(selectedItems.length > 0),
                     },
-                    {
+                    AWS_FFMPEG_ENDPOINT ? {
                       text: "FFmpeg",
                       id: "ffmpeg",
                       disabled: !(selectedItems.length === 1),
@@ -267,7 +268,7 @@ const Flows = () => {
                           id: "create-job",
                         },
                       ],
-                    },
+                    } : {},
                   ]}
                 >
                   Actions
