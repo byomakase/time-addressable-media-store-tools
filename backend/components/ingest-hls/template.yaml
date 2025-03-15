@@ -220,6 +220,7 @@ Resources:
         - !Ref FFprobeLayer
       Environment:
         Variables:
+          POWERTOOLS_SERVICE_NAME: tams-tools
           CODEC_PARAMETER: !Ref CodecsParameterName
           CONTAINERS_PARAMETER: !Ref ContainersParameter
       Policies:
