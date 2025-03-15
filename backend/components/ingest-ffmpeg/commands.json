@@ -6,7 +6,20 @@
             "-vf scale=320:180",
             "-qscale:v 2"
         ],
-        "outputFormat": "image2"
+        "outputFormat": "image2",
+        "tams": {
+            "description": "FFmpeg (Thumbnail)",
+            "codec": "image/jpeg",
+            "container": "image/jpeg",
+            "avg_bit_rate": null,
+            "max_bit_rate": null,
+            "segment_duration": null,
+            "format": "urn:x-nmos:format:image",
+            "essence_parameters": {
+                "frame_width": 320,
+                "frame_height": 180
+            }
+        }
     },
     "Proxy Video": {
         "command": [
@@ -15,6 +28,13 @@
             "-vf scale=854:480",
             "-b:v 1000k"
         ],
-        "outputFormat": "mpegts"
+        "outputFormat": "mpegts",
+        "tams": {
+            "description": "FFmpeg (Proxy Video)",
+            "avg_bit_rate": 1000000,
+            "max_bit_rate": 1000000,
+            "essence_parameters.frame_width": 854,
+            "essence_parameters.frame_height": 480
+        }
     }
 }

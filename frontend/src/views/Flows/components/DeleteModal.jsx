@@ -12,7 +12,7 @@ const DeleteModal = ({
   modalVisible,
   setModalVisible,
   selectedItems,
-  setSelectedItems,
+  mutateFlows,
 }) => {
   const { del, isDeleting } = useDelete();
   const addAlertItems = useStore((state) => state.addAlertItems);
@@ -38,7 +38,7 @@ const DeleteModal = ({
     );
     await Promise.all(promises);
     setModalVisible(false);
-    setSelectedItems([]);
+    mutateFlows();
   };
 
   const handleDismiss = () => {

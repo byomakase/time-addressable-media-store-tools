@@ -9,23 +9,24 @@ import {
   SpaceBetween,
   TextContent,
 } from "@cloudscape-design/components";
+import { Link } from "react-router-dom";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import useStore from "@/stores/useStore";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { AWS_REGION, AWS_FFMPEG_PARAMETER } from "@/constants";
 import { useCreateRule } from "@/hooks/useFfmpeg";
+import createFFmegFlow from "@/utils/createFFmegFlow";
 
 const CreateRuleModal = ({
   modalVisible,
   setModalVisible,
   selectedFlowId,
-  setSelectedItems,
-  flowIds,
+  mutateFlows,
 }) => {
   const [commands, setCommands] = useState([]);
-  const [destination, setDestination] = useState("");
-  const [ffmpeg, setFfmpeg] = useState({});
-  const { put, isPutting } = useCreateRule();
+  const [ffmpeg, setFfmpeg] = useState();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { put } = useCreateRule();
   const addAlertItem = useStore((state) => state.addAlertItem);
   const delAlertItem = useStore((state) => state.delAlertItem);
 
@@ -48,30 +49,37 @@ const CreateRuleModal = ({
 
   const handleDismiss = () => {
     setModalVisible(false);
-    setFfmpeg({});
-    setDestination({});
+    setFfmpeg();
   };
 
   const createRule = async () => {
-    const putPromise = put({
-      flowId: selectedFlowId,
-      destinationFlowId: destination,
-      payload: ffmpeg,
-    });
+    setIsSubmitting(true);
+    const destination = await createFFmegFlow(selectedFlowId, ffmpeg.tams);
     const id = crypto.randomUUID();
     addAlertItem({
       type: "success",
       dismissible: true,
       dismissLabel: "Dismiss message",
-      content: <TextContent>The Rule is being created...</TextContent>,
+      content: (
+        <TextContent>
+          <p>The Rule is being created...</p>
+          <p>
+            It will ingest into flow{" "}
+            <Link to={`/flows/${destination}`}>{destination}</Link>
+          </p>
+        </TextContent>
+      ),
       id: id,
       onDismiss: () => delAlertItem(id),
     });
-    await putPromise;
-    setModalVisible(false);
-    setDestination({});
-    setFfmpeg({});
-    setSelectedItems([]);
+    await put({
+      flowId: selectedFlowId,
+      destinationFlowId: destination,
+      payload: ffmpeg,
+    });
+    handleDismiss();
+    setIsSubmitting(false);
+    mutateFlows();
   };
 
   return (
@@ -81,10 +89,19 @@ const CreateRuleModal = ({
       footer={
         <Box float="right">
           <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" disabled={isPutting} onClick={handleDismiss}>
+            <Button
+              variant="link"
+              disabled={isSubmitting}
+              onClick={handleDismiss}
+            >
               Cancel
             </Button>
-            <Button variant="primary" loading={isPutting} onClick={createRule}>
+            <Button
+              variant="primary"
+              loading={isSubmitting}
+              disabled={!ffmpeg}
+              onClick={createRule}
+            >
               Create
             </Button>
           </SpaceBetween>
@@ -93,18 +110,6 @@ const CreateRuleModal = ({
       header="Create FFmpeg Event Rule"
     >
       <SpaceBetween size="xs">
-        <FormField
-          description="Provide a destination Flow"
-          label="Destination Flow"
-        >
-          <Select
-            selectedOption={flowIds.find(({ value }) => value === destination)}
-            onChange={({ detail }) =>
-              setDestination(detail.selectedOption.value)
-            }
-            options={flowIds}
-          />
-        </FormField>
         <FormField
           description="Choose an FFmpeg command"
           label="FFmpeg Command"
@@ -115,19 +120,21 @@ const CreateRuleModal = ({
             options={commands}
           />
         </FormField>
-        <KeyValuePairs
-          columns={2}
-          items={[
-            {
-              label: "Command",
-              value: ffmpeg?.command?.join(" "),
-            },
-            {
-              label: "Output",
-              value: ffmpeg?.outputFormat,
-            },
-          ]}
-        />
+        {ffmpeg && (
+          <KeyValuePairs
+            columns={2}
+            items={[
+              {
+                label: "Command",
+                value: ffmpeg.command?.join(" "),
+              },
+              {
+                label: "Output",
+                value: ffmpeg.outputFormat,
+              },
+            ]}
+          />
+        )}
       </SpaceBetween>
     </Modal>
   );
