@@ -1,7 +1,7 @@
 import {
   Box,
   Button,
-  ButtonGroup,
+  ButtonDropdown,
   CollectionPreferences,
   Header,
   Pagination,
@@ -11,188 +11,163 @@ import {
   Toggle,
 } from "@cloudscape-design/components";
 import DeleteModal from "./components/DeleteModal";
-import FFmpegModal from "./components/FFmpegModal";
+import DeleteTimeRangeModal from "./components/DeleteTimeRangeModal";
 import { useFlows } from "@/hooks/useFlows";
 import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useState } from "react";
+import CreateRuleModal from "./components/CreateRuleModal";
+import CreateJobModal from "./components/CreateJobModal";
+
+const columnDefinitions = [
+  {
+    id: "id",
+    header: "Id",
+    cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
+    sortingField: "id",
+    isRowHeader: true,
+    width: 310,
+  },
+  {
+    id: "label",
+    header: "Label",
+    cell: (item) => item.label,
+    sortingField: "label",
+  },
+  {
+    id: "description",
+    header: "Description",
+    cell: (item) => item.description,
+    sortingField: "description",
+  },
+  {
+    id: "format",
+    header: "Format",
+    cell: (item) => item.format,
+    sortingField: "format",
+  },
+  {
+    id: "created_by",
+    header: "Created by",
+    cell: (item) => item.created_by,
+    sortingField: "created_by",
+  },
+  {
+    id: "updated_by",
+    header: "Modified by",
+    cell: (item) => item.updated_by,
+    sortingField: "updated_by",
+  },
+  {
+    id: "created",
+    header: "Created",
+    cell: (item) => item.created,
+    sortingField: "created",
+  },
+  {
+    id: "tags",
+    header: "Tags",
+    cell: (item) => item.tags,
+    sortingField: "tags",
+  },
+  {
+    id: "flow_collection",
+    header: "Flow collection",
+    cell: (item) => item.flow_collection,
+    sortingField: "flow_collection",
+  },
+  {
+    id: "collected_by",
+    header: "Collected by",
+    cell: (item) => item.collected_by,
+    sortingField: "collected_by",
+  },
+  {
+    id: "source_id",
+    header: "Source id",
+    cell: (item) => item.source_id,
+    sortingField: "source_id",
+  },
+  {
+    id: "metadata_version",
+    header: "Metadata version",
+    cell: (item) => item.metadata_version,
+    sortingField: "metadata_version",
+  },
+  {
+    id: "generation",
+    header: "Generation",
+    cell: (item) => item.generation,
+    sortingField: "generation",
+  },
+  {
+    id: "metadata_updated",
+    header: "Metadata updated",
+    cell: (item) => item.metadata_updated,
+    sortingField: "metadata_updated",
+  },
+  {
+    id: "segments_updated",
+    header: "Segments updated",
+    cell: (item) => item.segments_updated,
+    sortingField: "segments_updated",
+  },
+  {
+    id: "read_only",
+    header: "Read only",
+    cell: (item) => item.read_only,
+    sortingField: "read_only",
+  },
+  {
+    id: "codec",
+    header: "Codec",
+    cell: (item) => item.codec,
+    sortingField: "codec",
+  },
+  {
+    id: "container",
+    header: "Container",
+    cell: (item) => item.container,
+    sortingField: "container",
+  },
+  {
+    id: "avg_bit_rate",
+    header: "Avg bit rate",
+    cell: (item) => item.avg_bit_rate,
+    sortingField: "avg_bit_rate",
+  },
+  {
+    id: "max_bit_rate",
+    header: "Max bit rate",
+    cell: (item) => item.max_bit_rate,
+    sortingField: "max_bit_rate",
+  },
+];
+const collectionPreferencesProps = {
+  pageSizePreference: {
+    title: "Select page size",
+    options: [
+      { value: 10, label: "10 resources" },
+      { value: 20, label: "20 resources" },
+    ],
+  },
+  contentDisplayPreference: {
+    title: "Column preferences",
+    description: "Customize the columns visibility and order.",
+    options: columnDefinitions.map(({ id, header }) => ({
+      id,
+      label: header,
+      alwaysVisible: id === "id",
+    })),
+  },
+  cancelLabel: "Cancel",
+  confirmLabel: "Confirm",
+  title: "Preferences",
+};
 
 const Flows = () => {
   const { flows, mutate, isLoading, isValidating } = useFlows();
   const [showHierarchy, setShowHierarchy] = useState(true);
-  const [selectedItem, setSelectedItem] = useState();
-
-  const columnDefinitions = [
-    {
-      id: "id",
-      header: "Id",
-      cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
-      sortingField: "id",
-      isRowHeader: true,
-      width: 310,
-    },
-    {
-      id: "label",
-      header: "Label",
-      cell: (item) => item.label,
-      sortingField: "label",
-    },
-    {
-      id: "description",
-      header: "Description",
-      cell: (item) => item.description,
-      sortingField: "description",
-    },
-    {
-      id: "format",
-      header: "Format",
-      cell: (item) => item.format,
-      sortingField: "format",
-    },
-    {
-      id: "created_by",
-      header: "Created by",
-      cell: (item) => item.created_by,
-      sortingField: "created_by",
-    },
-    {
-      id: "updated_by",
-      header: "Modified by",
-      cell: (item) => item.updated_by,
-      sortingField: "updated_by",
-    },
-    {
-      id: "created",
-      header: "Created",
-      cell: (item) => item.created,
-      sortingField: "created",
-    },
-    {
-      id: "tags",
-      header: "Tags",
-      cell: (item) => item.tags,
-      sortingField: "tags",
-    },
-    {
-      id: "flow_collection",
-      header: "Flow collection",
-      cell: (item) => item.flow_collection,
-      sortingField: "flow_collection",
-    },
-    {
-      id: "collected_by",
-      header: "Collected by",
-      cell: (item) => item.collected_by,
-      sortingField: "collected_by",
-    },
-    {
-      id: "source_id",
-      header: "Source id",
-      cell: (item) => item.source_id,
-      sortingField: "source_id",
-    },
-    {
-      id: "metadata_version",
-      header: "Metadata version",
-      cell: (item) => item.metadata_version,
-      sortingField: "metadata_version",
-    },
-    {
-      id: "generation",
-      header: "Generation",
-      cell: (item) => item.generation,
-      sortingField: "generation",
-    },
-    {
-      id: "metadata_updated",
-      header: "Metadata updated",
-      cell: (item) => item.metadata_updated,
-      sortingField: "metadata_updated",
-    },
-    {
-      id: "segments_updated",
-      header: "Segments updated",
-      cell: (item) => item.segments_updated,
-      sortingField: "segments_updated",
-    },
-    {
-      id: "read_only",
-      header: "Read only",
-      cell: (item) => item.read_only,
-      sortingField: "read_only",
-    },
-    {
-      id: "codec",
-      header: "Codec",
-      cell: (item) => item.codec,
-      sortingField: "codec",
-    },
-    {
-      id: "container",
-      header: "Container",
-      cell: (item) => item.container,
-      sortingField: "container",
-    },
-    {
-      id: "avg_bit_rate",
-      header: "Avg bit rate",
-      cell: (item) => item.avg_bit_rate,
-      sortingField: "avg_bit_rate",
-    },
-    {
-      id: "max_bit_rate",
-      header: "Max bit rate",
-      cell: (item) => item.max_bit_rate,
-      sortingField: "max_bit_rate",
-    },
-    {
-      id: "button",
-      minWidth: 96,
-      cell: (item) => (
-        <ButtonGroup
-          onItemClick={({ detail }) => handleOnClick({ detail, item })}
-          items={[
-            {
-              type: "icon-button",
-              id: "delete",
-              iconName: "remove",
-              text: "Delete",
-            },
-            {
-              type: "icon-button",
-              id: "add",
-              iconName: "add-plus",
-              text: "Create Rule",
-            },
-          ]}
-          variant="icon"
-        />
-      ),
-    },
-  ];
-
-  const collectionPreferencesProps = {
-    pageSizePreference: {
-      title: "Select page size",
-      options: [
-        { value: 10, label: "10 resources" },
-        { value: 20, label: "20 resources" },
-      ],
-    },
-    contentDisplayPreference: {
-      title: "Column preferences",
-      description: "Customize the columns visibility and order.",
-      options: columnDefinitions.map(({ id, header }) => ({
-        id,
-        label: header,
-        alwaysVisible: id === "id" || id === "button",
-      })),
-    },
-    cancelLabel: "Cancel",
-    confirmLabel: "Confirm",
-    title: "Preferences",
-  };
-
   const [preferences, setPreferences] = useState({
     pageSize: 10,
     contentDisplay: [
@@ -216,7 +191,6 @@ const Flows = () => {
       { id: "container", visible: false },
       { id: "avg_bit_rate", visible: false },
       { id: "max_bit_rate", visible: false },
-      { id: "button", visible: true },
     ],
   });
   const [modalVisible, setModalVisible] = useState(false);
@@ -242,10 +216,12 @@ const Flows = () => {
       },
       pagination: { pageSize: preferences.pageSize },
       sorting: {},
+      selection: {},
     });
+  const { selectedItems } = collectionProps;
+  const { setSelectedItems } = actions;
 
-  const handleOnClick = ({ detail, item }) => {
-    setSelectedItem(item);
+  const handleOnClick = ({ detail }) => {
     setActionId(detail.id);
     setModalVisible(true);
   };
@@ -261,6 +237,41 @@ const Flows = () => {
                 direction="horizontal"
                 alignItems="center"
               >
+                <ButtonDropdown
+                  onItemClick={handleOnClick}
+                  disabled={selectedItems.length === 0}
+                  expandableGroups
+                  items={[
+                    {
+                      text: "Delete",
+                      id: "delete",
+                      disabled: !(selectedItems.length > 0),
+                    },
+                    {
+                      text: "Timerange delete",
+                      id: "timerange",
+                      disabled: !(selectedItems.length > 0),
+                    },
+                    {
+                      text: "FFmpeg",
+                      id: "ffmpeg",
+                      disabled: !(selectedItems.length === 1),
+                      disabledReason: "Select only one Flow for this action.",
+                      items: [
+                        {
+                          text: "Create FFmpeg Rule",
+                          id: "create-rule",
+                        },
+                        {
+                          text: "Create FFmpeg Job",
+                          id: "create-job",
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  Actions
+                </ButtonDropdown>
                 <Button
                   iconName="refresh"
                   variant="link"
@@ -284,10 +295,10 @@ const Flows = () => {
         loadingText="Loading resources"
         loading={isValidating || isLoading}
         trackBy="id"
+        selectionType="multi"
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
-        stickyColumns={{ first: 0, last: 1 }}
         items={items}
         pagination={<Pagination {...paginationProps} />}
         filter={<TextFilter {...filterProps} />}
@@ -305,23 +316,55 @@ const Flows = () => {
             <DeleteModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              selectedItem={selectedItem}
-              setSelectedItem={setSelectedItem}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
             />
           ),
-          add: (
-            <FFmpegModal
+          timerange: (
+            <DeleteTimeRangeModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              selectedItem={selectedItem}
-              setSelectedItem={setSelectedItem}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
+            />
+          ),
+          "create-rule": (
+            <CreateRuleModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedFlowId={
+                selectedItems.length > 0 ? selectedItems[0].id : ""
+              }
+              setSelectedItems={setSelectedItems}
               flowIds={
                 isValidating || isLoading
                   ? []
-                  : flows.map((flow) => ({
-                      label: flow.description,
-                      value: flow.id,
-                    }))
+                  : flows
+                      .filter((flow) => !selectedItems.includes(flow))
+                      .map((flow) => ({
+                        label: flow.description,
+                        value: flow.id,
+                      }))
+              }
+            />
+          ),
+          "create-job": (
+            <CreateJobModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedFlowId={
+                selectedItems.length > 0 ? selectedItems[0].id : ""
+              }
+              setSelectedItems={setSelectedItems}
+              flowIds={
+                isValidating || isLoading
+                  ? []
+                  : flows
+                      .filter((flow) => !selectedItems.includes(flow))
+                      .map((flow) => ({
+                        label: flow.description,
+                        value: flow.id,
+                      }))
               }
             />
           ),
