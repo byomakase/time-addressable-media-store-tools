@@ -31,7 +31,10 @@ Parameters:
   SegmentIngestQueueArn:
     Type: String
 
-Transform: AWS::Serverless-2016-10-31
+Transform:
+  - AWS::LanguageExtensions
+
+  - AWS::Serverless-2016-10-31
 
 Globals:
   Function:
@@ -262,27 +265,12 @@ Resources:
       Type: String
       DataType: text
       Description: FFmpeg commands available to the Web UI
-      Value: |
-        {
-            "Thumbnail size image": {
-                "command": [
-                    "-ss 00:00:00",
-                    "-frames:v 1",
-                    "-vf scale=320:180",
-                    "-qscale:v 2"
-                ],
-                "outputFormat": "image2"
-            },
-            "Proxy Video": {
-                "command": [
-                    "-c:v libx264",
-                    "-copyts",
-                    "-vf scale=854:480",
-                    "-b:v 1000k"
-                ],
-                "outputFormat": "mpegts"
-            }
-        }
+      Value:
+        Fn::ToJsonString:
+          Fn::Transform:
+            Name: AWS::Include
+            Parameters:
+              Location: commands.json
 
   FFmpegWorkFunction:
     Type: AWS::Serverless::Function
