@@ -186,7 +186,9 @@ Resources:
       Value: |
         {
           "aac": "audio/aac",
-          "mpegts": "video/mp2t"
+          "mpegts": "video/mp2t",
+          "mov,mp4,m4a,3gp,3g2,mj2": "video/mp4",
+          "webvtt": "text/vtt"
         }
 
   FFprobeLayer:

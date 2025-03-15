@@ -40,7 +40,7 @@ def map_container(probe: dict) -> str:
     if not mappings.get(format_name):
         with single_metric(
             namespace="Powertools",
-            name="ConatinerMappingMiss",
+            name="ContainerMappingMiss",
             unit=MetricUnit.Count,
             value=1,
         ) as metric:
@@ -238,45 +238,72 @@ def process_media(
     flows = []
     flow_manifests = {}
     for media in manifest.media:
-        if media.type == "AUDIO":
-            flow_id = str(uuid.uuid4())
-            flow_manifests[flow_id] = (
-                media.uri
-                if media.uri.startswith("http")
-                else f"{manifest_path}/{media.uri}"
-            )
-            probe = get_manifest_segment_probe(flow_manifests[flow_id])
-            audio_stream = next(
-                (
-                    stream
-                    for stream in probe.get("streams", [])
-                    if stream["codec_type"] == "audio"
-                ),
-                {},
-            )
-            codec = audio_codecs[media.group_id]
-            tags = {}
-            for attr in ["language", "name", "autoselect", "default"]:
-                if getattr(media, attr, None):
-                    tags[f"hls_{attr}"] = getattr(media, attr)
-            flow = {
-                "id": flow_id,
-                "label": label,
-                "description": f"HLS Import ({os.path.basename(media.uri)})",
-                "codec": codec[0],
-                "container": map_container(probe),
-                "format": "urn:x-nmos:format:audio",
-                "essence_parameters": {
-                    **codec[1],
-                    "channels": int(media.channels),
-                    "sample_rate": int(audio_stream.get("sample_rate", "48000")),
-                },
-                "tags": tags,
-            }
-            if audio_stream.get("bit_rate"):
-                flow["avg_bit_rate"] = int(audio_stream["bit_rate"])
-                flow["max_bit_rate"] = int(audio_stream["bit_rate"])
-            flows.append(flow)
+        flow_id = str(uuid.uuid4())
+        flow_manifests[flow_id] = (
+            media.uri
+            if media.uri.startswith("http")
+            else f"{manifest_path}/{media.uri}"
+        )
+        probe = get_manifest_segment_probe(flow_manifests[flow_id])
+        tags = {}
+        for attr in ["language", "name", "autoselect", "default", "forced"]:
+            if getattr(media, attr, None):
+                tags[f"hls_{attr}"] = getattr(media, attr)
+        match media.type:
+            case "AUDIO":
+                audio_stream = next(
+                    (
+                        stream
+                        for stream in probe.get("streams", [])
+                        if stream["codec_type"] == "audio"
+                    ),
+                    {},
+                )
+                codec = audio_codecs[media.group_id]
+                flow = {
+                    "id": flow_id,
+                    "label": label,
+                    "description": f"HLS Import ({os.path.basename(media.uri)})",
+                    "codec": codec[0],
+                    "container": map_container(probe),
+                    "format": "urn:x-nmos:format:audio",
+                    "essence_parameters": {
+                        **codec[1],
+                        "channels": int(media.channels),
+                        "sample_rate": int(audio_stream.get("sample_rate", "48000")),
+                    },
+                    "tags": tags,
+                }
+                if audio_stream.get("bit_rate"):
+                    flow["avg_bit_rate"] = int(audio_stream["bit_rate"])
+                    flow["max_bit_rate"] = int(audio_stream["bit_rate"])
+                flows.append(flow)
+            case "SUBTITLES":
+                subtitle_stream = next(
+                    (
+                        stream
+                        for stream in probe.get("streams", [])
+                        if stream["codec_type"] == "subtitle"
+                    ),
+                    {},
+                )
+                codec = map_codec(subtitle_stream.get("codec_name", "NotFound"))
+                flow = {
+                    "id": flow_id,
+                    "label": label,
+                    "description": f"HLS Import ({os.path.basename(media.uri)})",
+                    "codec": codec[0],
+                    "container": map_container(probe),
+                    "format": "urn:x-nmos:format:data",
+                    "essence_parameters": {
+                        **codec[1],
+                        "data_type": "urn:x-tams:data:subtitle",
+                    },
+                    "tags": tags,
+                }
+                if subtitle_stream.get("codec_name"):
+                    flow["codec"] = codec[0]
+                flows.append(flow)
     return flows, flow_manifests
 
 
