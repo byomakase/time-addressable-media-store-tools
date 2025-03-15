@@ -210,7 +210,7 @@ def process_playlists(
             flow["format"] = "urn:x-nmos:format:audio"
             flow["essence_parameters"] = {
                 **tams_codecs[0][1],
-                "channels": audio_stream.get("channels", 2),
+                "channels": int(audio_stream.get("channels", 2)),
                 "sample_rate": int(audio_stream.get("sample_rate", "48000")),
             }
         flows.append(flow)
@@ -251,7 +251,7 @@ def process_media(
                 "format": "urn:x-nmos:format:audio",
                 "essence_parameters": {
                     **codec[1],
-                    "channels": media.channels,
+                    "channels": int(media.channels),
                     "sample_rate": int(audio_stream.get("sample_rate", "48000")),
                 },
             }
