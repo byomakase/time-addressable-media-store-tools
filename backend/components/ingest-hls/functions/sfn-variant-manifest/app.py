@@ -39,7 +39,10 @@ def map_container(probe: dict) -> str:
     mappings = get_containers_mappings()
     if not mappings.get(format_name):
         with single_metric(
-            name="ConatinerMappingMiss", unit=MetricUnit.Count, value=1
+            namespace="Powertools",
+            name="ConatinerMappingMiss",
+            unit=MetricUnit.Count,
+            value=1,
         ) as metric:
             metric.add_dimension(name="format_name", value=format_name)
     return mappings.get(format_name, f"unknown/{format_name}")
@@ -64,7 +67,10 @@ def map_codec(hls_codec: str) -> tuple[str, dict]:
     codec_mappings = get_codec_mappings()
     if not codec_mappings.get(codec):
         with single_metric(
-            name="CodecMappingMiss", unit=MetricUnit.Count, value=1
+            namespace="Powertools",
+            name="CodecMappingMiss",
+            unit=MetricUnit.Count,
+            value=1,
         ) as metric:
             metric.add_dimension(name="codec", value=codec)
     mapped_codec = codec_mappings.get(codec, f"unknown/{codec}")
