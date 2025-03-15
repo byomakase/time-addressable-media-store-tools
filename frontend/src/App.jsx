@@ -73,6 +73,9 @@ const App = () => {
             <Route path=":flowId" element={<Flow />} />
           </Route>
           <Route path="diagram/:type/:id" element={<Diagram />} />
+          {AWS_HLS_API_ENDPOINT && (
+            <Route path="player/:type/:id" element={<HlsPlayer />} />
+          )}
           {AWS_HLS_INGEST_ENDPOINT && (
             <>
               <Route path="workflows" element={<HlsIngestion />} />
@@ -87,9 +90,6 @@ const App = () => {
             </>
           )}
         </Route>
-        {AWS_HLS_API_ENDPOINT && (
-          <Route path="player/:type/:id" element={<HlsPlayer />} />
-        )}
       </Routes>
     </HashRouter>
   );

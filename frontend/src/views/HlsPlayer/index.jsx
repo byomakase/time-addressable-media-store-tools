@@ -1,4 +1,5 @@
 import { AWS_HLS_API_ENDPOINT } from "@/constants";
+import { Box } from "@cloudscape-design/components";
 import VideoJS from "./components/VideoJS";
 import { useParams } from "react-router-dom";
 import { useRef } from "react";
@@ -35,7 +36,11 @@ export const HlsPlayer = () => {
     });
   };
 
-  return <VideoJS options={videoJsOptions} onReady={playerReady} />;
+  return (
+    <Box textAlign="center">
+      <VideoJS options={videoJsOptions} onReady={playerReady} />
+    </Box>
+  );
 };
 
 export default HlsPlayer;

@@ -2,7 +2,6 @@ import {
   Box,
   Button,
   Header,
-  Link,
   SpaceBetween,
   Spinner,
   Tabs,
@@ -34,13 +33,13 @@ const Source = () => {
           <SpaceBetween size="xl" direction="horizontal">
             <span>Source details</span>
             {AWS_HLS_API_ENDPOINT && (
-              <Link
-                href={`/#/player/sources/${sourceId}`}
-                variant="secondary"
-                external
+              <Button
+                href={`/player/sources/${sourceId}`}
+                variant="inline-link"
+                onFollow={followLink}
               >
                 View HLS
-              </Link>
+              </Button>
             )}
             <Button
               href={`/diagram/sources/${sourceId}`}
