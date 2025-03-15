@@ -173,6 +173,10 @@ Resources:
           {
             "tams": "video/h264",
             "hls": "avc1"
+          },
+          {
+            "tams": "text/vtt",
+            "hls": "webvtt"
           }
         ]
     Condition: DeployHls

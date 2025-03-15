@@ -74,13 +74,13 @@ def get_mp4a_codec_string(essence_parameters):
 
 
 @tracer.capture_method(capture_response=False)
-def get_audio_props(flow, flow_pos):
+def get_hls_props(flow, flow_pos):
     prefix = "hls_"
     tagged_props = {
         k[len(prefix) :]: v
         for k, v in flow.get("tags", {}).items()
         if k.startswith(prefix)
-        and k[len(prefix) :] in ["language", "name", "autoselect", "default"]
+        and k[len(prefix) :] in ["language", "name", "autoselect", "default", "forced"]
     }
     if "name" not in tagged_props:
         tagged_props["name"] = flow["description"]
@@ -182,18 +182,24 @@ def get_collected_flows(flows):
                 ):
                     flows_queue.append(get_flow(collected["id"]))
         else:
-            flows_dict[flow["format"].split(":")[3]].append(flow)
+            if (
+                flow["format"] == "urn:x-nmos:format:data"
+                and flow.get("essence_parameters", {}).get("data_type", "")
+                == "urn:x-tams:data:subtitle"
+            ):
+                flows_dict["subtitle"].append(flow)
+            else:
+                flows_dict[flow["format"].split(":")[3]].append(flow)
     return flows_dict
 
 
 @tracer.capture_method(capture_response=False)
-def get_collection_hls(video_flows, audio_flows):
+def get_collection_hls(video_flows, audio_flows, subtitle_flows):
     domain_name = app.current_event.request_context.domain_name
     video_flows.sort(key=lambda k: k["max_bit_rate"], reverse=True)
     manifest = m3u8.M3U8()
     manifest.version = 4
     manifest.is_independent_segments = True
-    first_audio = None
     # Use Stream for Audio if no Video present
     if len(video_flows) == 0:
         for flow in audio_flows:
@@ -211,9 +217,22 @@ def get_collection_hls(video_flows, audio_flows):
             )
         return manifest.dumps()
     # Use Media for Audio if Video present
+    first_subtitle = None
+    for i, flow in enumerate(subtitle_flows):
+        media = m3u8.Media(
+            **get_hls_props(flow, i),
+            type="SUBTITLES",
+            group_id="subs",
+            uri=f'https://{domain_name}/flows/{flow["id"]}/segments/manifest.m3u8',
+        )
+        if i == 0:
+            first_subtitle = media
+        manifest.add_media(media)
+    # Use Media for Audio if Video present
+    first_audio = None
     for i, flow in enumerate(audio_flows):
         media = m3u8.Media(
-            **get_audio_props(flow, i),
+            **get_hls_props(flow, i),
             type="AUDIO",
             group_id="audio",
             channels=flow["essence_parameters"]["channels"],
@@ -241,9 +260,12 @@ def get_collection_hls(video_flows, audio_flows):
                     "resolution": f"{width}x{height}",
                     "frame_rate": frame_rate,
                     "audio": first_audio.group_id if first_audio else None,
+                    "subtitles": first_subtitle.group_id if first_subtitle else None,
                 },
                 uri=f'https://{domain_name}/flows/{flow["id"]}/segments/manifest.m3u8',
-                media=m3u8.MediaList([first_audio] if first_audio else []),
+                media=m3u8.MediaList(
+                    [media for media in [first_audio, first_subtitle] if media]
+                ),
                 base_uri=None,
             )
         )
@@ -258,7 +280,9 @@ def get_source_hls(sourceId: str):
     try:
         flows = get_flows(sourceId)
         flows_dict = get_collected_flows(flows)
-        m3u8_content = get_collection_hls(flows_dict["video"], flows_dict["audio"])
+        m3u8_content = get_collection_hls(
+            flows_dict["video"], flows_dict["audio"], flows_dict["subtitle"]
+        )
         return Response(
             status_code=HTTPStatus.OK.value,  # 200
             content_type="application/vnd.apple.mpegurl",
@@ -289,7 +313,9 @@ def get_flow_hls(flowId: str):
                 [get_flow(collected["id"]) for collected in flow["flow_collection"]]
             )
         flows_dict = get_collected_flows(flows)
-        m3u8_content = get_collection_hls(flows_dict["video"], flows_dict["audio"])
+        m3u8_content = get_collection_hls(
+            flows_dict["video"], flows_dict["audio"], flows_dict["subtitle"]
+        )
         return Response(
             status_code=HTTPStatus.OK.value,  # 200
             content_type="application/vnd.apple.mpegurl",
