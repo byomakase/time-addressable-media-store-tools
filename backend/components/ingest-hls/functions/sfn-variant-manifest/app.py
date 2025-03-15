@@ -242,6 +242,10 @@ def process_media(
                 {},
             )
             codec = audio_codecs[media.group_id]
+            tags = {}
+            for attr in ["language", "name", "autoselect", "default"]:
+                if getattr(media, attr, None):
+                    tags[f"hls_{attr}"] = getattr(media, attr)
             flow = {
                 "id": flow_id,
                 "label": label,
@@ -254,6 +258,7 @@ def process_media(
                     "channels": int(media.channels),
                     "sample_rate": int(audio_stream.get("sample_rate", "48000")),
                 },
+                "tags": tags,
             }
             if audio_stream.get("bit_rate"):
                 flow["avg_bit_rate"] = int(audio_stream["bit_rate"])

@@ -74,6 +74,24 @@ def get_mp4a_codec_string(essence_parameters):
 
 
 @tracer.capture_method(capture_response=False)
+def get_audio_props(flow, flow_pos):
+    prefix = "hls_"
+    tagged_props = {
+        k[len(prefix) :]: v
+        for k, v in flow.get("tags", {}).items()
+        if k.startswith(prefix)
+        and k[len(prefix) :] in ["language", "name", "autoselect", "default"]
+    }
+    if "name" not in tagged_props:
+        tagged_props["name"] = flow["description"]
+    if "default" not in tagged_props:
+        tagged_props["default"] = "YES" if flow_pos == 0 else "NO"
+    if "autoselect" not in tagged_props:
+        tagged_props["autoselect"] = "YES"
+    return tagged_props
+
+
+@tracer.capture_method(capture_response=False)
 def get_source(source_id):
     get = requests.get(
         f"{endpoint}/sources/{source_id}",
@@ -195,11 +213,9 @@ def get_collection_hls(video_flows, audio_flows):
     # Use Media for Audio if Video present
     for i, flow in enumerate(audio_flows):
         media = m3u8.Media(
+            **get_audio_props(flow, i),
             type="AUDIO",
             group_id="audio",
-            name=flow["description"],
-            default="YES" if i == 0 else "NO",
-            autoselect="YES",
             channels=flow["essence_parameters"]["channels"],
             uri=f'https://{domain_name}/flows/{flow["id"]}/segments/manifest.m3u8',
             codecs=map_codec(flow),
