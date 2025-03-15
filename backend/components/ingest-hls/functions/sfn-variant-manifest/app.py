@@ -35,17 +35,14 @@ def map_container(probe: dict) -> str:
     """Maps the format_name found from FFprobe to a TAMS container mime type"""
     format_name = probe.get("format", {}).get("format_name", None)
     if not format_name:
-        return "video/mp2t"
+        return "video/mp2t"  # Default container value
     mappings = get_containers_mappings()
-    format_names = format_name.split(",")
-    mapped_formats = [mappings[f] for f in format_names if mappings.get(f)]
-    if not mapped_formats:
+    if not mappings.get(format_name):
         with single_metric(
-            name="ContainerMappingMiss", unit=MetricUnit.Count, value=1
+            name="ConatinerMappingMiss", unit=MetricUnit.Count, value=1
         ) as metric:
             metric.add_dimension(name="format_name", value=format_name)
-        return f"unknown/{format_names[0]}"
-    return mapped_formats[0]
+    return mappings.get(format_name, f"unknown/{format_name}")
 
 
 @tracer.capture_method(capture_response=False)
