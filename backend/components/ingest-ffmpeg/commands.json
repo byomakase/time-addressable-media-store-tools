@@ -1,0 +1,20 @@
+{
+    "Thumbnail size image": {
+        "command": [
+            "-ss 00:00:00",
+            "-frames:v 1",
+            "-vf scale=320:180",
+            "-qscale:v 2"
+        ],
+        "outputFormat": "image2"
+    },
+    "Proxy Video": {
+        "command": [
+            "-c:v libx264",
+            "-copyts",
+            "-vf scale=854:480",
+            "-b:v 1000k"
+        ],
+        "outputFormat": "mpegts"
+    }
+}
