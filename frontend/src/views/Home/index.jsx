@@ -16,6 +16,7 @@ const Home = () => {
 
   - **MediaLive Channels** shows a list of AWS Elemental MediaLive Channels. You can choose to Ingest the channel and/or start/stop the Channel.
   - **MediaConvert Jobs** shows a list of AWS Elemental MediaConvert Jobs. You can choose to Ingest the job.
+  - **HLS Ingests** shows a list of HLS Ingest Jobs and their status. You can also create a new HLS Ingest job.
 
   > **NOTE**: The Ingest workflow for both MediaLive and MediaConvert uses the HLS manifest file produced by those services to determine how and what to ingest. Therefore only output types of HLS for Channels and Jobs will support ingest.
 

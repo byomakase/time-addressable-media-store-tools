@@ -83,11 +83,6 @@ const Layout = () => {
                     items: [
                       {
                         type: "link",
-                        text: "HLS Ingests",
-                        href: "/workflows",
-                      },
-                      {
-                        type: "link",
                         text: "MediaLive Channels",
                         href: "/channels",
                       },
@@ -95,6 +90,11 @@ const Layout = () => {
                         type: "link",
                         text: "MediaConvert Jobs",
                         href: "/jobs",
+                      },
+                      {
+                        type: "link",
+                        text: "HLS Ingests",
+                        href: "/workflows",
                       },
                     ],
                   }
