@@ -4,6 +4,7 @@ import {
   Button,
   FormField,
   KeyValuePairs,
+  Input,
   Modal,
   Select,
   SpaceBetween,
@@ -24,6 +25,7 @@ const CreateRuleModal = ({
   mutateFlows,
 }) => {
   const [commands, setCommands] = useState([]);
+  const [destinationFlow, setDestinationFlow] = useState("");
   const [ffmpeg, setFfmpeg] = useState();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { put } = useCreateRule();
@@ -49,12 +51,13 @@ const CreateRuleModal = ({
 
   const handleDismiss = () => {
     setModalVisible(false);
+    setDestinationFlow("");
     setFfmpeg();
   };
 
   const createRule = async () => {
     setIsSubmitting(true);
-    const destination = await createFFmegFlow(selectedFlowId, ffmpeg.tams);
+    const destination = destinationFlow || (await createFFmegFlow(selectedFlowId, ffmpeg.tams));
     const id = crypto.randomUUID();
     addAlertItem({
       type: "success",
@@ -110,6 +113,17 @@ const CreateRuleModal = ({
       header="Create FFmpeg Event Rule"
     >
       <SpaceBetween size="xs">
+        <FormField
+          description="(Optional) Specify the ID for an existing Flow to ingest into. Leave blank to create a new Flow."
+          label="Destination"
+        >
+          <Input
+            value={destinationFlow}
+            onChange={({ detail }) => {
+              setDestinationFlow(detail.value);
+            }}
+          />
+        </FormField>
         <FormField
           description="Choose an FFmpeg command"
           label="FFmpeg Command"
