@@ -26,6 +26,7 @@ const CreateJobModal = ({
 }) => {
   const [commands, setCommands] = useState([]);
   const [timerange, setTimerange] = useState("");
+  const [destinationFlow, setDestinationFlow] = useState("");
   const [ffmpeg, setFfmpeg] = useState();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { start } = useJobStart();
@@ -52,13 +53,15 @@ const CreateJobModal = ({
   const handleDismiss = () => {
     setModalVisible(false);
     setTimerange("");
+    setDestinationFlow("");
     setFfmpeg();
     setIsSubmitting(false);
   };
 
   const createJob = async () => {
     setIsSubmitting(true);
-    const destination = await createFFmegFlow(selectedFlowId, ffmpeg.tams);
+    const destination =
+      destinationFlow || (await createFFmegFlow(selectedFlowId, ffmpeg.tams));
     const id = crypto.randomUUID();
     addAlertItem({
       type: "success",
@@ -123,6 +126,17 @@ const CreateJobModal = ({
             value={timerange}
             onChange={({ detail }) => {
               setTimerange(detail.value);
+            }}
+          />
+        </FormField>
+        <FormField
+          description="(Optional) Specify the ID for an existing Flow to ingest into. Leave blank to create a new Flow."
+          label="Destination"
+        >
+          <Input
+            value={destinationFlow}
+            onChange={({ detail }) => {
+              setDestinationFlow(detail.value);
             }}
           />
         </FormField>
