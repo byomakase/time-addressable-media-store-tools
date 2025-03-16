@@ -39,6 +39,10 @@ Transform:
 Globals:
   Function:
     Tracing: Active
+    Timeout: 30
+    MemorySize: 128
+    Handler: app.lambda_handler
+    Runtime: python3.13
     Architectures:
       - arm64
 
@@ -121,10 +125,6 @@ Resources:
           - id: W92
             reason: ReservedConcurrentExecutions not required
     Properties:
-      Timeout: 30
-      MemorySize: 128
-      Handler: app.lambda_handler
-      Runtime: python3.13
       CodeUri: functions/api-ffmpeg-ingestion/
       Layers:
         - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
@@ -272,7 +272,7 @@ Resources:
             Parameters:
               Location: commands.json
 
-  FFmpegWorkFunction:
+  FFmpegWorkerFunction:
     Type: AWS::Serverless::Function
     Metadata:
       cfn_nag:
@@ -281,25 +281,18 @@ Resources:
             reason: VPC not required
           - id: W92
             reason: ReservedConcurrentExecutions not required
-      DockerContext: functions/ffmpeg-worker/
-      Dockerfile: Dockerfile
     Properties:
       Timeout: 900
-      MemorySize: 10240
-      PackageType: Image
+      MemorySize: 1024
+      Handler: app.lambdaHandler
+      Runtime: nodejs22.x
+      CodeUri: functions/ffmpeg-worker/
       Environment:
         Variables:
-          FFMPEG_QUEUE_URL: !Ref FFmpegJobQueue
           INGEST_QUEUE_URL: !Ref SegmentIngestQueueUrl
       Policies:
         - Version: "2012-10-17"
           Statement:
-            - Effect: Allow
-              Action:
-                - sqs:ReceiveMessage
-                - sqs:DeleteMessage
-              Resource:
-                - !GetAtt FFmpegJobQueue.Arn
             - Effect: Allow
               Action:
                 - sqs:SendMessage
