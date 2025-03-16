@@ -22,7 +22,7 @@ const columnDefinitions = [
     cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
     sortingField: "id",
     isRowHeader: true,
-    width:310,
+    width: 310,
   },
   {
     id: "sourceTimerange",
@@ -51,19 +51,25 @@ const columnDefinitions = [
       <Link to={`/flows/${item.destinationFlow}`}>{item.destinationFlow}</Link>
     ),
     sortingField: "destinationFlow",
-    width:310,
+    width: 310,
   },
   {
     id: "status",
-    header: "Jobs Status",
+    header: "Status",
     cell: (item) =>
       item.status && (
-        <StatusIndicator type={STATUS_MAPPINGS[item.status]}>
-          {item.status}
-        </StatusIndicator>
+        <>
+          <StatusIndicator type={STATUS_MAPPINGS[item.status]}>
+            {item.status}
+          </StatusIndicator>
+          <ExternalLink
+            external
+            href={`https://${AWS_REGION}.console.aws.amazon.com/states/home?region=${AWS_REGION}#/v2/executions/details/${item.executionArn}`}
+            variant="info"
+          />
+        </>
       ),
-    sortingField: "Status",
-    // minWidth: 80,
+    sortingField: "status",
   },
   {
     id: "startDate",
@@ -76,21 +82,6 @@ const columnDefinitions = [
     header: "Stop",
     cell: (item) => item.stopDate,
     sortingField: "stopDate",
-  },
-  {
-    id: "info",
-    header: "Job Link",
-    cell: (item) =>
-      item.executionArn && (
-        <ExternalLink
-          external
-          href={`https://${AWS_REGION}.console.aws.amazon.com/states/home?region=${AWS_REGION}#/v2/executions/details/${item.executionArn}/`}
-          variant="info"
-        />
-      ),
-    sortingField: "Input",
-    isRowHeader: true,
-    minWidth: 80,
   },
 ];
 const collectionPreferencesProps = {
@@ -128,7 +119,6 @@ const FfmpegJobs = () => {
       { id: "status", visible: true },
       { id: "startDate", visible: false },
       { id: "stopDate", visible: false },
-      { id: "info", visible: false },
     ],
   });
   const { items, collectionProps, filterProps, paginationProps } =
