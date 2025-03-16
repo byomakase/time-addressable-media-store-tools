@@ -121,4 +121,4 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
                 message["timerange"] = f'{message["timerange"].split("_")[0]}]'
             post_segment(flow_id, media_object["object_id"], message["timerange"])
             if message.get("deleteSource", False):
-                delete_s3_file(record["uri"])
+                delete_s3_file(message["uri"])
