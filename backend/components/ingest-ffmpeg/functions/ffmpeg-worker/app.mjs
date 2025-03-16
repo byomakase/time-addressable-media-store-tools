@@ -1,9 +1,4 @@
-import {
-  SQSClient,
-  ReceiveMessageCommand,
-  DeleteMessageCommand,
-  SendMessageCommand,
-} from "@aws-sdk/client-sqs";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import ffmpeg from "fluent-ffmpeg";
@@ -11,79 +6,107 @@ import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 import { PassThrough } from "stream";
 
 const REGION = process.env.AWS_REGION;
+const INGEST_QUEUE_URL = process.env.INGEST_QUEUE_URL;
 
 const s3Client = new S3Client({ region: REGION });
 const sqsClient = new SQSClient({ region: REGION });
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const processMessage = async (message) => {
-  console.log(message);
-  return Promise.all(
-    message.segments?.map(async (segment) => {
+  if (message.segments) {
+    for (const segment of message.segments) {
+      console.info(`Processing Object Id: ${segment.object_id}...`);
       const bucket = segment.get_urls
         .find((getUrl) => getUrl.label.includes(":s3:"))
         .url.match(/https:\/\/(?<bucket>.*)\.s3.*/).groups.bucket;
-      const getObjectCommand = new GetObjectCommand({
-        Bucket: bucket,
-        Key: segment.object_id,
-      });
-      const getObjectCommandResponse = await s3Client.send(getObjectCommand);
+      const getObjectCommandResponse = await s3Client.send(
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key: segment.object_id,
+        })
+      );
       const passThrough = new PassThrough();
-      const outputFile = crypto.randomUUID();
+      const outputKey = `${message.outputPrefix}${crypto.randomUUID()}`;
+      console.info(
+        `Preparing S3 destination: s3://${message.outputBucket}/${outputKey}...`
+      );
       const upload = new Upload({
         client: s3Client,
         params: {
           Bucket: message.outputBucket,
-          Key: `${message.outputPrefix}${outputFile}`,
+          Key: outputKey,
           Body: passThrough,
         },
       });
-      ffmpeg(getObjectCommandResponse.Body)
+      ffmpeg()
+        .input(getObjectCommandResponse.Body)
         .outputOptions(message.ffmpeg.command)
         .outputFormat(message.ffmpeg.outputFormat)
+        .on("start", (commandLine) => {
+          console.info("FFmpeg command:", commandLine);
+        })
+        .on("error", (err, stdout, stderr) => {
+          console.error("FFmpeg error:", err);
+          console.error("FFmpeg stderr:", stderr);
+        })
+        .on("end", () => {
+          console.info("FFmpeg processing finished");
+        })
         .pipe(passThrough, { end: true });
+      console.info("Uploading output to S3...");
       await upload.done();
-      const sendMessageCommand = new SendMessageCommand({
-        QueueUrl: process.env.INGEST_QUEUE_URL,
-        MessageBody: JSON.stringify({
-          flowId: message.destinationFlow,
-          timerange: segment.timerange,
-          uri: `s3://${message.outputBucket}/${message.outputPrefix}${outputFile}`,
-          deleteSource: true,
-        }),
-      });
-      await sqsClient.send(sendMessageCommand);
-    })
-  );
+      console.info(
+        `Processing complete, Timerange: ${segment.timerange}, FlowId: ${message.destinationFlow}...`
+      );
+      console.info(`Sending SQS message to ${INGEST_QUEUE_URL}...`);
+      await sqsClient.send(
+        new SendMessageCommand({
+          QueueUrl: INGEST_QUEUE_URL,
+          MessageBody: JSON.stringify({
+            flowId: message.destinationFlow,
+            timerange: segment.timerange,
+            uri: `s3://${message.outputBucket}/${outputKey}`,
+            deleteSource: true,
+          }),
+        })
+      );
+    }
+  }
 };
 
 export const lambdaHandler = async (event, context) => {
-  console.log(event);
+  console.info(event);
   for (const message of event.Records) {
     await processMessage(JSON.parse(message.body));
   }
 };
 
-// Main method to be used for local/ECS execution mode.
-export const main = async () => {
-  const QueueUrl = process.env.FFMPEG_QUEUE_URL;
-  const receiveMessageCommand = new ReceiveMessageCommand({
-    QueueUrl,
-    MaxNumberOfMessages: 1,
-    WaitTimeSeconds: 10,
-  });
-  while (true) {
-    const receiveMessageResponse = await sqsClient.send(receiveMessageCommand);
-    receiveMessageResponse.Messages &&
-      (await Promise.all(
-        receiveMessageResponse.Messages?.map(async (message) => {
-          await processMessage(JSON.parse(message.Body));
-          const deleteMessageCommand = new DeleteMessageCommand({
-            QueueUrl,
-            ReceiptHandle: message.ReceiptHandle,
-          });
-          sqsClient.send(deleteMessageCommand);
-        })
-      ));
-  }
-};
+// export const main = async () => {
+//   const receiveMessageCommand = new ReceiveMessageCommand({
+//     QueueUrl: FFMPEG_QUEUE_URL,
+//     MaxNumberOfMessages: 1,
+//     WaitTimeSeconds: 10,
+//   });
+//   while (true) {
+//     console.info(`Polling SQS queue: ${FFMPEG_QUEUE_URL}...`);
+//     const receiveMessageResponse = await sqsClient.send(receiveMessageCommand);
+//     if (receiveMessageResponse.Messages) {
+//       for (const message of receiveMessageResponse.Messages) {
+//         console.info("Message received...");
+//         await processMessage(JSON.parse(message.Body));
+//         console.info("Deleting message...");
+//         await sqsClient.send(
+//           new DeleteMessageCommand({
+//             QueueUrl: FFMPEG_QUEUE_URL,
+//             ReceiptHandle: message.ReceiptHandle,
+//           })
+//         );
+//       }
+//     }
+//   }
+// };
+
+// main().catch((error) => {
+//   console.error("Error in main:", error);
+//   process.exit(1);
+// });
