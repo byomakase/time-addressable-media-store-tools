@@ -59,7 +59,7 @@ Resources:
     Type: AWS::IAM::RolePolicy
     Properties:
       RoleName: !Ref AuthRoleName
-      PolicyName: FFmpegIngest
+      PolicyName: !Ref AWS::StackName
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -216,7 +216,7 @@ Resources:
     Type: AWS::IAM::RolePolicy
     Properties:
       RoleName: !Ref SqsSegmentIngestionFunctionRoleName
-      PolicyName: FFmpegIngest
+      PolicyName: !Ref AWS::StackName
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
