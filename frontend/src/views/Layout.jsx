@@ -79,7 +79,7 @@ const Layout = () => {
               AWS_HLS_INGEST_ENDPOINT
                 ? {
                     type: "section",
-                    text: "Ingestion",
+                    text: "Ingest",
                     items: [
                       {
                         type: "link",

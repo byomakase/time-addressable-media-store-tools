@@ -135,7 +135,7 @@ const MediaConvertIngestion = () => {
         loadingText="Loading resources"
         loading={isLoading}
         trackBy="id"
-        header={<Header>Jobs</Header>}
+        header={<Header>MediaConvert Jobs</Header>}
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"

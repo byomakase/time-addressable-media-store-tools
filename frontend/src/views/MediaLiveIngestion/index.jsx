@@ -145,7 +145,7 @@ const MediaLiveIngestion = () => {
         loadingText="Loading resources"
         loading={isLoading}
         trackBy="id"
-        header={<Header>MediaConvert Channels</Header>}
+        header={<Header>MediaLive Channels</Header>}
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
