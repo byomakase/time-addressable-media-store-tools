@@ -9,7 +9,6 @@ import {
   AWS_USER_POOL_ID,
 } from "@/constants";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { Mode, applyMode } from "@cloudscape-design/global-styles";
 
 import { Amplify } from "aws-amplify";
 import { ConsoleLogger } from "aws-amplify/utils";
@@ -55,8 +54,6 @@ Amplify.configure({
     },
   },
 });
-
-applyMode(Mode.Dark);
 
 const App = () => {
   return (
