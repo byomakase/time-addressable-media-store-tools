@@ -31,6 +31,9 @@ Parameters:
   SegmentIngestQueueArn:
     Type: String
 
+  EventBusName:
+    Type: String
+
 Transform:
   - AWS::LanguageExtensions
 
@@ -72,6 +75,7 @@ Resources:
             Action:
               - execute-api:Invoke
             Resource:
+              - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/GET/ffmpeg-exports
               - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/GET/ffmpeg-rules
               - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/PUT/ffmpeg-rules/*
               - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/${Api.Stage}/DELETE/ffmpeg-rules/*
@@ -86,6 +90,17 @@ Resources:
               - states:StartExecution
             Resource:
               - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${FfmpegBatch.Name}
+              - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${FfmpegExport.Name}
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource:
+              - !GetAtt FFmpegBucket.Arn
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub ${FFmpegBucket.Arn}/export/*
 
   ApiLogGroup:
     Type: AWS::Logs::LogGroup
@@ -134,6 +149,8 @@ Resources:
           OUTPUT_BUCKET: !Ref FFmpegBucket
           EVENT_RULE_ROLE_ARN: !GetAtt EventRuleRole.Arn
           FFMPEG_BATCH_ARN: !Ref FfmpegBatch
+          FFMPEG_EXPORT_ARN: !Ref FfmpegExport
+          EVENT_BUS_NAME: !Ref EventBusName
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -160,11 +177,13 @@ Resources:
                 - states:ListExecutions
               Resource:
                 - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${FfmpegBatch.Name}
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${FfmpegExport.Name}
             - Effect: Allow
               Action:
                 - states:DescribeExecution
               Resource:
                 - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:execution:${FfmpegBatch.Name}:*
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:execution:${FfmpegExport.Name}:*
       Events:
         listFFmpegRules:
           Type: HttpApi
@@ -176,19 +195,25 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref Api
-            Path: /ffmpeg-rules/{flowId}/{destinationFlowId}
+            Path: /ffmpeg-rules/{flowId}/{outputFlowId}
             Method: put
         deleteFFmpegRules:
           Type: HttpApi
           Properties:
             ApiId: !Ref Api
-            Path: /ffmpeg-rules/{flowId}/{destinationFlowId}
+            Path: /ffmpeg-rules/{flowId}/{outputFlowId}
             Method: delete
         listFFmpegJobs:
           Type: HttpApi
           Properties:
             ApiId: !Ref Api
             Path: /ffmpeg-jobs
+            Method: get
+        listFFmpegExports:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /ffmpeg-exports
             Method: get
 
   FFmpegBucket:
@@ -283,13 +308,16 @@ Resources:
             reason: ReservedConcurrentExecutions not required
     Properties:
       Timeout: 900
-      MemorySize: 1024
+      MemorySize: 8192
       Handler: app.lambdaHandler
       Runtime: nodejs22.x
+      EphemeralStorage:
+        Size: 6144
       CodeUri: functions/ffmpeg-worker/
       Environment:
         Variables:
           INGEST_QUEUE_URL: !Ref SegmentIngestQueueUrl
+          FFMPEG_BUCKET: !Ref FFmpegBucket
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -305,7 +333,9 @@ Resources:
                 - !Sub arn:aws:s3:::*/*
             - Effect: Allow
               Action:
+                - s3:GetObject
                 - s3:PutObject
+                - s3:DeleteObject
               Resource:
                 - !Sub ${FFmpegBucket.Arn}/*
       Events:
@@ -361,6 +391,51 @@ Resources:
               Resource:
                 - !GetAtt FFmpegJobQueue.Arn
 
+  FfmpegExport:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachines/ffmpegexport.yaml
+      DefinitionSubstitutions:
+        AwsRegion: !Ref AWS::Region
+        ConnectionArn: !Ref TamsConnectionArn
+        TamsEndpoint: !Ref ApiEndpoint
+        FFmpegWorkerFunctionArn: !GetAtt FFmpegWorkerFunction.Arn
+        BucketName: !Ref FFmpegBucket
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:RetrieveConnectionCredentials
+              Resource:
+                - !Ref TamsConnectionArn
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:DescribeSecret
+              Resource:
+                - !Sub
+                  - arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:events!connection/${TamsConnection}/*
+                  - TamsConnection: !Select [1, !Split [/, !Ref TamsConnectionArn]]
+            - Effect: Allow
+              Action:
+                - states:InvokeHTTPEndpoint
+              Resource:
+                - !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*
+              Condition:
+                StringEquals:
+                  states:HTTPMethod:
+                    - GET
+                StringLike:
+                  states:HTTPEndpoint:
+                    - !Sub ${ApiEndpoint}/service
+                    - !Sub ${ApiEndpoint}/flows/*/segments
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt FFmpegWorkerFunction.Arn
+
 Outputs:
   ApiEndpoint:
     Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com
@@ -373,3 +448,6 @@ Outputs:
 
   FfmpegBatchArn:
     Value: !Ref FfmpegBatch
+
+  FfmpegExportArn:
+    Value: !Ref FfmpegExport
