@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
   FormField,
   Input,
   Modal,
@@ -20,6 +21,7 @@ const StartIngestModal = ({
   selectedItem,
   setSelectedItem,
 }) => {
+  const [useEpoch, setUseEpoch] = useState(false);
   const [label, setLabel] = useState("");
   const { execute, isExecuting } = useStateMachine();
   const addAlertItem = useStore((state) => state.addAlertItem);
@@ -33,6 +35,7 @@ const StartIngestModal = ({
       input: stringify({
         label,
         manifestLocation: selectedItem.manifestUri,
+        useEpoch: useEpoch,
       }),
       traceHeader: id,
     });
@@ -89,13 +92,20 @@ const StartIngestModal = ({
         <FormField
           description="The following manifest will be processed and ingested."
           label="Manifest URI"
-          warningText={selectedItem.manifestExists && "Content already exists in this location.  Starting ingest now will ingest this into TAMS.  If you are setting up a new ingest process then you may wish to delete the existing content before starting the ingest process."}
+          warningText={
+            selectedItem.manifestExists &&
+            "Content already exists in this location.  Starting ingest now will ingest this into TAMS.  If you are setting up a new ingest process then you may wish to delete the existing content before starting the ingest process."
+          }
         >
-          <Textarea
-            value={selectedItem?.manifestUri}
-            readOnly
-          />
+          <Textarea value={selectedItem?.manifestUri} readOnly />
         </FormField>
+        <Checkbox
+          onChange={({ detail }) => setUseEpoch(detail.checked)}
+          checked={useEpoch}
+        >
+          Use the Last Modified timestamp of the manifest as the start of the
+          TAMS timerange.
+        </Checkbox>
         <FormField
           description="Provide a value for the label to use in TAMS."
           label="Label"

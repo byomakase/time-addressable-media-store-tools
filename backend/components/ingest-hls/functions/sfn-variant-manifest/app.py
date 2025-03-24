@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+from datetime import datetime
 from fractions import Fraction
 from functools import lru_cache
 from urllib.parse import urlparse
@@ -128,6 +129,28 @@ def get_file(source: str) -> bytes:
             response = requests.get(source, timeout=30)
             response.raise_for_status()
             return response.content
+
+
+@tracer.capture_method(capture_response=False)
+def get_last_modified(source: str) -> int:
+    """Gets the Last Modified epoch (as int) of the supplied source uri"""
+    source_parse = urlparse(source)
+    match source_parse.scheme:
+        case "s3":
+            response = s3.head_object(
+                Bucket=source_parse.netloc, Key=source_parse.path[1:]
+            )
+            return int(response["LastModified"].timestamp())
+        case "https" | "http":
+            response = requests.head(source, timeout=30)
+            response.raise_for_status()
+            if response.headers.get("Last-Modified"):
+                return int(
+                    datetime.strptime(
+                        response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z"
+                    ).timestamp()
+                )
+    return 0
 
 
 @tracer.capture_method(capture_response=False)
@@ -336,6 +359,8 @@ def set_source_and_multi(label: str, description: str, flows: list) -> list:
 def lambda_handler(event: dict, context: LambdaContext) -> dict:
     label = event["label"]
     manifest_location = event["manifestLocation"]
+    use_epoch = event.get("useEpoch", False)
+    flow_start = get_last_modified(manifest_location) if use_epoch else 0
     manifest_path = os.path.dirname(manifest_location)
     manifest = get_manifest(manifest_location)
     playlist_flows, playlist_flow_manifests, audio_codecs = process_playlists(
@@ -365,7 +390,11 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
         "flows": flows,
         "multiFlows": multi_flows,
         "flowManifests": [
-            {"flowId": flow_id, "manifestLocation": uri}
+            {
+                "flowId": flow_id,
+                "manifestLocation": uri,
+                "lastTimestamp": f"{flow_start}:0",
+            }
             for flow_id, uri in flow_manifests.items()
         ],
     }

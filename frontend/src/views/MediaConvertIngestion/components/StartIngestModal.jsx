@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
   FormField,
   Input,
   Modal,
@@ -20,6 +21,7 @@ const StartIngestModal = ({
   selectedItem,
   setSelectedItem,
 }) => {
+  const [useEpoch, setUseEpoch] = useState(false);
   const [label, setLabel] = useState("");
   const { execute, isExecuting } = useStateMachine();
   const addAlertItem = useStore((state) => state.addAlertItem);
@@ -33,6 +35,7 @@ const StartIngestModal = ({
       input: stringify({
         label,
         manifestLocation: selectedItem.manifestUri,
+        useEpoch: useEpoch,
       }),
       traceHeader: id,
     });
@@ -90,11 +93,15 @@ const StartIngestModal = ({
           description="The following manifest will be processed and ingested."
           label="Manifest URI"
         >
-          <Textarea
-            value={selectedItem?.manifestUri}
-            readOnly
-          />
+          <Textarea value={selectedItem?.manifestUri} readOnly />
         </FormField>
+        <Checkbox
+          onChange={({ detail }) => setUseEpoch(detail.checked)}
+          checked={useEpoch}
+        >
+          Use the Last Modified timestamp of the manifest as the start of the
+          TAMS timerange.
+        </Checkbox>
         <FormField
           description="Provide a value for the label to use in TAMS."
           label="Label"
