@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
   FormField,
   Input,
   Modal,
@@ -14,10 +15,8 @@ import { useStateMachine } from "@/hooks/useStateMachine";
 import useStore from "@/stores/useStore";
 import stringify from "json-stable-stringify";
 
-const StartIngestModal = ({
-  modalVisible,
-  setModalVisible,
-}) => {
+const StartIngestModal = ({ modalVisible, setModalVisible }) => {
+  const [useEpoch, setUseEpoch] = useState(false);
   const [label, setLabel] = useState("");
   const [manifestUri, setManifestUri] = useState("");
   const { execute, isExecuting } = useStateMachine();
@@ -32,6 +31,7 @@ const StartIngestModal = ({
       input: stringify({
         label,
         manifestLocation: manifestUri,
+        useEpoch: useEpoch,
       }),
       traceHeader: id,
     });
@@ -97,6 +97,13 @@ const StartIngestModal = ({
             placeholder="Enter an http/s url or S3 uri"
           />
         </FormField>
+        <Checkbox
+          onChange={({ detail }) => setUseEpoch(detail.checked)}
+          checked={useEpoch}
+        >
+          Use the Last Modified timestamp of the manifest as the start of the
+          TAMS timerange.
+        </Checkbox>
         <FormField
           description="Provide a value for the label to use in TAMS."
           label="Label"
