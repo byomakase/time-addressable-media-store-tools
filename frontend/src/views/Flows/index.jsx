@@ -258,24 +258,26 @@ const Flows = () => {
                       ? {
                           text: "FFmpeg",
                           id: "ffmpeg",
-                          disabled: !(selectedItems.length > 0),
+                          disabled:
+                            selectedItems.length === 0 ||
+                            selectedItems.some((item) => !item.container),
                           disabledReason:
-                            "Select only one Flow for this action.",
+                            selectedItems.some((item) => !item.container) &&
+                            "The container property must have a value on all selected flows.",
                           items: [
                             {
                               text: "Create FFmpeg Export",
                               id: "create-export",
-                              disabled: !(selectedItems.length >= 1),
                             },
                             {
                               text: "Create FFmpeg Rule",
                               id: "create-rule",
-                              disabled: !(selectedItems.length === 1),
+                              disabled: selectedItems.length !== 1,
                             },
                             {
                               text: "Create FFmpeg Job",
                               id: "create-job",
-                              disabled: !(selectedItems.length === 1),
+                              disabled: selectedItems.length !== 1,
                             },
                           ],
                         }
