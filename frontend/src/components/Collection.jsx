@@ -20,10 +20,7 @@ const Collection = ({ entityType, collection }) => {
   ]
 
   const { items, collectionProps } = useCollection(
-    collection.map(({ id, role }) => ({
-      id,
-      role,
-    })),
+    collection ?? [],
     {
       sorting: {},
     }
@@ -39,7 +36,7 @@ const Collection = ({ entityType, collection }) => {
       items={items}
     />
   ) : (
-    "No source collection(s)"
+    `No ${entityType} collection(s)`
   );
 };
 
