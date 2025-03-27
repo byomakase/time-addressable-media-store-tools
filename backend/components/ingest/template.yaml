@@ -40,6 +40,7 @@ Resources:
             reason: ReservedConcurrentExecutions not required
     Properties:
       CodeUri: functions/sqs-segment-ingestion
+      RecursiveLoop: Allow
       Layers:
         - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
         - !Ref OpenIdAuthLayerArn
@@ -74,6 +75,20 @@ Resources:
             Enabled: True
 
   SegmentIngestQueue:
+    Type: AWS::SQS::Queue
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W48
+            reason: Encryption not required
+    Properties:
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SegmentIngestDLQ.Arn
+        maxReceiveCount: 1
+
+  SegmentIngestDLQ:
     Type: AWS::SQS::Queue
     Metadata:
       cfn_nag:

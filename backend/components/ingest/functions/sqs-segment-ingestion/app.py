@@ -133,15 +133,13 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
                 flow_id, get_file(message["uri"], message.get("byterange", None))
             )
             if media_object is None:
-                logger.error(f"Unable to upload file to flow {flow_id}")
-                continue
+                raise ValueError(f"Unable to upload file to flow {flow_id}")
             if media_object["put_url"]["content-type"].split("/")[0] == "image":
                 message["timerange"] = f'{message["timerange"].split("_")[0]}]'
             post_result = post_segment(
                 flow_id, media_object["object_id"], message["timerange"]
             )
             if not post_result:
-                logger.error(f"Unable to post segment to flow {flow_id}")
-                continue
+                raise ValueError(f"Unable to post segment to flow {flow_id}")
             if message.get("deleteSource", False):
                 delete_s3_file(message["uri"])
