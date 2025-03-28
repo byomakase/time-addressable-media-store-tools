@@ -10,13 +10,25 @@ import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 import { PassThrough } from "stream";
 import { createWriteStream, createReadStream } from "fs";
 import { unlink } from "fs/promises";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
+import { Agent } from "https";
 
 const REGION = process.env.AWS_REGION;
 const INGEST_QUEUE_URL = process.env.INGEST_QUEUE_URL;
 const FFMPEG_BUCKET = process.env.FFMPEG_BUCKET;
 
-const s3Client = new S3Client({ region: REGION });
-const sqsClient = new SQSClient({ region: REGION });
+const s3Client = new S3Client({
+  region: REGION,
+  requestHandler: new NodeHttpHandler({
+    httpsAgent: new Agent({ keepAlive: false }),
+  }),
+});
+const sqsClient = new SQSClient({
+  region: REGION,
+  requestHandler: new NodeHttpHandler({
+    httpsAgent: new Agent({ keepAlive: false }),
+  }),
+});
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const getS3BucketFromUrl = (getUrls) => {
