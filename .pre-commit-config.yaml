@@ -17,18 +17,18 @@ repos:
         args:
           - --maxkb=1000
       - id: check-merge-conflict
-      #- id: no-commit-to-branch
-      #  args:
-      #    - --branch
-      #    - main
+      - id: no-commit-to-branch
+        args:
+          - --branch
+          - main
 
-  # # Secrets
-  # - repo: https://github.com/awslabs/git-secrets
-  #   rev: 5357e18bc27b42a827b6780564ea873a72ca1f01
-  #   hooks:
-  #     - id: git-secrets
-  #       entry: git-secrets --scan
-  #       files: .
+  # Secrets
+  - repo: https://github.com/awslabs/git-secrets
+    rev: 5357e18bc27b42a827b6780564ea873a72ca1f01
+    hooks:
+      - id: git-secrets
+        entry: git-secrets --scan
+        files: .
 
   # CloudFormation Lint
   - repo: https://github.com/aws-cloudformation/cfn-python-lint
