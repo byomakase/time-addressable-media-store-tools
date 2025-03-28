@@ -104,7 +104,7 @@ const CreateExportModal = ({
           </SpaceBetween>
         </Box>
       }
-      header="Create FFmpeg Batch Job"
+      header="Create FFmpeg Export Job"
     >
       <SpaceBetween size="xs">
         <FormField
