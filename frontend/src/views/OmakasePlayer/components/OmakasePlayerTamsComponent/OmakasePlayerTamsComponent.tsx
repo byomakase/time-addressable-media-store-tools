@@ -130,10 +130,20 @@ function resolveVideoInfo(
     (timeAndFrameRate) => timeAndFrameRate.frameRate !== undefined
   );
 
+  const start =
+    videoStartTimeAndFrameRate?.start ??
+    sortedStartTimeAndFramerate.at(0)!.start;
+  const date = new Date(start * 1000);
+  const hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes();
+  const seconds = date.getUTCSeconds();
+  const milliseconds = date.getUTCMilliseconds();
+
+  const realStart = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+
   if (videoStartTimeAndFrameRate === undefined) {
-    const start = sortedStartTimeAndFramerate.at(0)!.start;
     return {
-      ffom: TimecodeUtil.formatToTimecode(start, 100),
+      ffom: TimecodeUtil.formatToTimecode(realStart, 100),
       markerOffset: start,
       fps: 100,
     };
@@ -141,7 +151,7 @@ function resolveVideoInfo(
 
   return {
     ffom: TimecodeUtil.formatToTimecode(
-      videoStartTimeAndFrameRate.start,
+      realStart,
       videoStartTimeAndFrameRate.frameRate!
     ),
     markerOffset: videoStartTimeAndFrameRate.start,
@@ -661,9 +671,9 @@ const OmakasePlayerTamsComponent = React.memo(
             </div>
             <div className="player-wrapper">
               <OmakaseTimeRangePicker
-                numberOfSegments={5}
-                maxSliderRange={1500}
-                segmentSize={300}
+                numberOfSegments={6}
+                maxSliderRange={1800}
+                segmentSize={600}
                 timeRange={timeRange}
                 maxTimeRange={maxTimeRange}
                 onCheckmarkClickCallback={onCheckmarkClickCallback}

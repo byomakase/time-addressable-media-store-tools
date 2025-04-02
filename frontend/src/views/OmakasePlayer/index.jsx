@@ -55,8 +55,8 @@ function findLongestTimerange(flows) {
     }
 
     return {
-      start: start < acc.start ? start : acc.start,
-      end: end > acc.end ? end : acc.end,
+      start: start > acc.start ? start : acc.start,
+      end: end < acc.end ? end : acc.end,
     };
   }, null);
 
@@ -161,10 +161,12 @@ export const OmakaseHlsPlayer = () => {
         newMaxTimeRange,
         300
       );
-      setTimerange(resolvedTimeRange);
+      setTimerange((prev) => {
+        return prev === "[)" ? resolvedTimeRange : prev;
+      });
       setMaxTimerange(newMaxTimeRange);
     }
-  }, [flow, filteredChildFlows, loadingFlow, childFlows.isLoading]);
+  }, [flow, filteredChildFlows?.length]);
 
   if (
     flow &&
