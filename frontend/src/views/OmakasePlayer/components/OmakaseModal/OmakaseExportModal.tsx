@@ -1,5 +1,4 @@
 import React, { ReactNode, useEffect, useState } from "react";
-import { Flow } from "../../types/tams";
 import OmakaseModal from "./OmakaseModal";
 import { PopUpIcon } from "../../icons/PopUpIcon";
 import "./OmakaseExportModal.css";
@@ -13,15 +12,22 @@ import {
   PutEventsCommand,
   PutEventsCommandInput,
 } from "@aws-sdk/client-eventbridge";
-import { MarkerApi, MarkerLane, PeriodMarker } from "@byomakase/omakase-player";
+import {
+  MarkerApi,
+  MarkerLane,
+  OmakasePlayer,
+  PeriodMarker,
+} from "@byomakase/omakase-player";
 import { TimeRangeUtil } from "../../util/time-range-util";
 import { Spinner } from "@cloudscape-design/components";
+import { Flow, VideoFlow } from "@byomakase/omakase-react-components";
 
 export type OmakaseExportModalProps = {
   flows: Flow[];
   source: MarkerLane;
   markerOffset: number;
   exportDisabled: boolean;
+  omakasePlayer: OmakasePlayer;
 };
 
 export type OmakaseExportModalBodyProps = {
@@ -30,6 +36,7 @@ export type OmakaseExportModalBodyProps = {
   setShowModal: React.Dispatch<React.SetStateAction<boolean>> | undefined;
   markerOffset: number;
   showToast: (message: string, error: boolean, duration: number) => void;
+  omakasePlayer: OmakasePlayer;
 };
 
 export type OmakaseExportModalOperations =
@@ -148,12 +155,43 @@ type FormData = {
   flows: Record<string, boolean>;
 };
 
+function resolveMaxBitRateVideoFlow(flows: Flow[]) {
+  return flows.reduce(
+    (maxBitRateVideoFlow: VideoFlow | undefined, currentFlow: Flow) => {
+      if (currentFlow.format !== "urn:x-nmos:format:video") {
+        return maxBitRateVideoFlow;
+      }
+
+      currentFlow as VideoFlow;
+
+      if (maxBitRateVideoFlow === undefined) {
+        return currentFlow;
+      }
+
+      if (currentFlow.avg_bit_rate !== undefined) {
+        if (
+          maxBitRateVideoFlow.avg_bit_rate !== undefined &&
+          currentFlow.avg_bit_rate <= maxBitRateVideoFlow.avg_bit_rate
+        ) {
+          return maxBitRateVideoFlow;
+        }
+
+        return currentFlow;
+      }
+
+      return maxBitRateVideoFlow;
+    },
+    undefined
+  );
+}
+
 export function OmakaseExportModalBody({
   flows,
   setShowModal,
   source,
   markerOffset,
   showToast,
+  omakasePlayer,
 }: OmakaseExportModalBodyProps) {
   const operations = ["Segment Concatenation", "Flow Creation"];
   const formats = ["TS", "MP4"];
@@ -190,8 +228,16 @@ export function OmakaseExportModalBody({
 
     const { credentials } = await fetchAuthSession();
 
+    const region =
+      //@ts-ignore
+      import.meta.env.VITE_APP_AWS_REGION;
+
+    if (region === undefined) {
+      console.error("VITE_EXPORT_EVENT_BRIDGE_REGION is not defined in .env");
+    }
+
     const client = new EventBridgeClient({
-      region: "eu-central-1",
+      region: region,
       credentials: credentials,
     });
 
@@ -212,11 +258,19 @@ export function OmakaseExportModalBody({
           return undefined;
         }
 
+        // ensures marker start time lines up with start of the frame in milliseconds
+        const startTime = omakasePlayer.video.calculateFrameToTime(
+          omakasePlayer.video.calculateTimeToFrame(marker.timeObservation.start)
+        );
+        const endTime = omakasePlayer.video.calculateFrameToTime(
+          omakasePlayer.video.calculateTimeToFrame(marker.timeObservation.end)
+        );
+
         const startMoment = TimeRangeUtil.secondsToTimeMoment(
-          marker.timeObservation.start + markerOffset
+          startTime + markerOffset
         );
         const endMoment = TimeRangeUtil.secondsToTimeMoment(
-          marker.timeObservation.end + markerOffset
+          endTime + markerOffset
         );
         const timeRange = TimeRangeUtil.toTimeRange(
           startMoment,
@@ -229,10 +283,10 @@ export function OmakaseExportModalBody({
       })
       .filter((timeRange) => timeRange !== undefined);
 
-    const editFlows = selectedFlows
-    const videoFlow = flows.find((flow) => flow.format === "urn:x-nmos:format:video")
+    const editFlows = selectedFlows;
+    const videoFlow = resolveMaxBitRateVideoFlow(flows);
     if (videoFlow) {
-      editFlows.push(videoFlow.id)
+      editFlows.push(videoFlow.id);
     }
 
     const editPayload = timeRanges.map((timeRange) => ({
@@ -465,6 +519,7 @@ export default function OmakaseExportModal({
   source,
   markerOffset,
   exportDisabled,
+  omakasePlayer,
 }: OmakaseExportModalProps) {
   const [toast, setToast] = useState({
     message: "",
@@ -507,6 +562,7 @@ export default function OmakaseExportModal({
               source={source}
               markerOffset={markerOffset}
               showToast={showToast}
+              omakasePlayer={omakasePlayer}
             />
           }
         />

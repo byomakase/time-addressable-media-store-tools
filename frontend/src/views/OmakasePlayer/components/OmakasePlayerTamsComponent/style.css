@@ -48,8 +48,10 @@
   align-items: center;
 }
 
-.segmentation-names-smaller {
-  font-size: 12px;
+@media (max-width: 1920px) {
+  .segmentation-names-smaller {
+    font-size: 12px;
+  }
 }
 
 .segmentation-names div {
@@ -78,4 +80,48 @@
 .player-wrapper *:focus {
   outline: none;
   box-shadow: none;
+}
+
+div.omakase-help
+  div.omakase-help-dropdown
+  div.omakase-help-menu
+  div.omakase-help-group-title {
+  background: #292d43 !important;
+  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 17px;
+  color: #cacfea !important;
+}
+
+div.omakase-help
+  div.omakase-help-dropdown
+  div.omakase-help-menu
+  div.omakase-help-group {
+  background: #3a3d4b !important;
+  border-radius: 3px;
+}
+
+div.omakase-help
+  div.omakase-help-dropdown
+  div.omakase-help-menu
+  div.omakase-help-group
+  div.omakase-help-item {
+  border-bottom: 1px solid #292d43 !important;
+  color: #cacfea !important;
+}
+
+div.omakase-help
+  div.omakase-help-dropdown
+  div.omakase-help-menu
+  div.omakase-help-group
+  div.omakase-help-item:hover {
+  background: #525979 !important;
+}
+
+.omakase-player
+  .omakase-player-wrapper
+  .omakase-help
+  .omakase-help-dropdown
+  .omakase-help-button {
+  background-image: url(/help.svg) !important;
 }

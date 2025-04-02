@@ -1,4 +1,4 @@
-import {useApi, useApiRaw} from "@/hooks/useApi";
+import { useApi, useApiRaw } from "@/hooks/useApi";
 import useSWR from "swr";
 
 export const useSegments = (flowId) => {
@@ -39,9 +39,9 @@ export const useSegmentsOmakase = (flowId, timerange, maxPages = 10) => {
 
     if (nextKey) {
       return fetchSegments(
-          `/flows/${flowId}/segments?page=${nextKey}`,
-          allSegments,
-          pageCount + 1
+        `/flows/${flowId}/segments?page=${nextKey}`,
+        allSegments,
+        pageCount + 1
       );
     }
 
@@ -49,13 +49,15 @@ export const useSegmentsOmakase = (flowId, timerange, maxPages = 10) => {
   };
 
   const { data, mutate, error, isLoading, isValidating } = useSWR(
-      `/flows/${flowId}/segments${
+    flowId && timerange
+      ? `/flows/${flowId}/segments${
           timerange ? `?timerange=${timerange}` : ""
-      }&reverse_order=false&limit=300`,
-      async (path) => fetchSegments(path),
-      {
-        refreshInterval: 3000,
-      }
+        }&reverse_order=false&limit=300`
+      : null,
+    async (path) => fetchSegments(path),
+    {
+      refreshInterval: 3000,
+    }
   );
 
   return {
@@ -87,9 +89,9 @@ export const useSubflowsSegments = (flows, timerange, maxPages = 10) => {
 
     if (nextKey) {
       return fetchSegments(
-          `${path}&page=${nextKey}`, // Continue fetching next page
-          allSegments,
-          pageCount + 1
+        `${path}&page=${nextKey}`, // Continue fetching next page
+        allSegments,
+        pageCount + 1
       );
     }
 
@@ -97,22 +99,22 @@ export const useSubflowsSegments = (flows, timerange, maxPages = 10) => {
   };
 
   const params = timerange
-      ? `?timerange=${timerange}&reverse_order=false&limit=1000`
-      : `?reverse_order=false&limit=1000`;
+    ? `?timerange=${timerange}&reverse_order=false&limit=1000`
+    : `?reverse_order=false&limit=1000`;
 
   const { data, mutate, error, isLoading, isValidating } = useSWR(
-      flows?.length > 0
-          ? flows.map((flow) => `/flows/${flow.id}/segments${params}`)
-          : null,
-      async (paths) => {
-        const responses = await Promise.all(
-            paths.map((path) => fetchSegments(path))
-        );
-        return responses;
-      },
-      {
-        refreshInterval: 3000,
-      }
+    flows?.length > 0
+      ? flows.map((flow) => `/flows/${flow.id}/segments${params}`)
+      : null,
+    async (paths) => {
+      const responses = await Promise.all(
+        paths.map((path) => fetchSegments(path))
+      );
+      return responses;
+    },
+    {
+      refreshInterval: 3000,
+    }
   );
 
   return {

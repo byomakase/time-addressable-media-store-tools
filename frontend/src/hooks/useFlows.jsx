@@ -22,7 +22,7 @@ export const useFlows = () => {
 export const useFlow = (flowId) => {
   const { get } = useApi();
   const { data, mutate, error, isLoading, isValidating } = useSWR(
-    ["/flows", flowId],
+    flowId !== undefined ? ["/flows", flowId] : null,
     ([path, flowId]) => get(`${path}/${flowId}?include_timerange=true`),
     get,
     {
@@ -43,16 +43,16 @@ export const useChildFlows = (flowIds) => {
   const { get } = useApi();
 
   const { data, mutate, error, isLoading, isValidating } = useSWR(
-      flowIds?.length > 0 ? flowIds.map((id) => ["/flows", id]) : null,
-      async (keys) => {
-        const responses = await Promise.all(
-            keys.map(([path, id]) => get(`${path}/${id}?include_timerange=true`))
-        );
-        return responses;
-      },
-      {
-        refreshInterval: 3000,
-      }
+    flowIds?.length > 0 ? flowIds.map((id) => ["/flows", id]) : null,
+    async (keys) => {
+      const responses = await Promise.all(
+        keys.map(([path, id]) => get(`${path}/${id}?include_timerange=true`))
+      );
+      return responses;
+    },
+    {
+      refreshInterval: 3000,
+    }
   );
 
   return {
@@ -66,8 +66,12 @@ export const useChildFlows = (flowIds) => {
 
 export const useDelete = () => {
   const { del } = useApi();
-  const { trigger, isMutating } = useSWRMutation("/flows", (path, { arg }) =>
-    del(`${path}/${arg.flowId}`).then((response) => setTimeout(response, 1000)) // setTimeout used to artificially wait until basic deletes are complete.
+  const { trigger, isMutating } = useSWRMutation(
+    "/flows",
+    (path, { arg }) =>
+      del(`${path}/${arg.flowId}`).then((response) =>
+        setTimeout(response, 1000)
+      ) // setTimeout used to artificially wait until basic deletes are complete.
   );
 
   return {

@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 
 import { useFlow } from "@/hooks/useFlows";
 
-import { OmakasePlayerTamsComponent } from "./Omakase";
+import { useSourceFlowsWithTimerange } from "@/hooks/useSources";
+
+import { OmakasePlayerTamsComponent } from ".";
 import { TimeRangeUtil } from "@byomakase/omakase-react-components";
 
 import "@byomakase/omakase-react-components/dist/omakase-react-components.css";
@@ -14,6 +16,27 @@ import {
 } from "../../hooks/useSegments";
 import { useChildFlows } from "../../hooks/useFlows";
 import { Spinner } from "@cloudscape-design/components";
+
+function containsAudioOrVideoFlow(flow, childFlows) {
+  if (
+    flow?.format !== "urn:x-nmos:format:video" &&
+    flow?.format !== "urn:x-nmos:format:audio"
+  ) {
+    if (
+      childFlows?.find(
+        (childFlow) =>
+          childFlow.format === "urn:x-nmos:format:video" ||
+          childFlow.format === "urn:x-nmos:format:audio"
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  return true;
+}
 
 function findLongestTimerange(flows) {
   const range = flows.reduce((acc, currentFlow) => {
@@ -73,19 +96,50 @@ function resolveTimeRangeForLastNSeconds(timeRange, seconds) {
   return TimeRangeUtil.formatTimeRangeExpr(newTimeRange);
 }
 
-export const HlsPlayer = () => {
+export const OmakaseHlsPlayer = () => {
   const { type, id } = useParams();
 
-  const { flow, isLoading: loadingFlow } = useFlow(id);
+  const flowFromFlow = useFlow(type === "flows" ? id : undefined);
+  const flowsFromSource = useSourceFlowsWithTimerange(
+    type === "sources" ? id : undefined
+  );
+
+  let flow, loadingFlow;
+  if (type === "flows") {
+    flow = flowFromFlow.flow;
+    loadingFlow = flowFromFlow.loading;
+  } else {
+    flow = flowsFromSource.firstFlow;
+    loadingFlow = flowsFromSource.loading;
+  }
 
   let flowSegments;
 
   let childFlows = useChildFlows(flow?.flow_collection?.map((flow) => flow.id));
+  let filteredChildFlows = childFlows.flows;
+
+  if (childFlows.flows) {
+    flow = structuredClone(flow);
+    filteredChildFlows = childFlows.flows.filter((childFlow) => {
+      return !(
+        childFlow.tags?.hls_exclude === "true" ||
+        childFlow.tags?.hls_exclude === true ||
+        childFlow.tags?.hls_exclude === "1" ||
+        childFlow.tags?.hls_exclude === 1
+      );
+    });
+
+    const hlsIncludedFlows = filteredChildFlows.map((flow) => flow.id);
+
+    flow.flow_collection = flow.flow_collection.filter((collectedFlow) =>
+      hlsIncludedFlows.includes(collectedFlow.id)
+    );
+  }
 
   const [timerange, setTimerange] = useState("[)");
   const [maxTimeRange, setMaxTimerange] = useState();
 
-  flowSegments = useSegmentsOmakase(id, encodeURIComponent(timerange));
+  flowSegments = useSegmentsOmakase(flow?.id, timerange);
 
   const childFlowsSegmentsRaw = useSubflowsSegments(
     flow?.flow_collection,
@@ -100,7 +154,7 @@ export const HlsPlayer = () => {
   useEffect(() => {
     if (!loadingFlow && !childFlows.isLoading && (flow || childFlows.flows)) {
       const newMaxTimeRange = findLongestTimerange([
-        ...(childFlows.flows ?? []),
+        ...(filteredChildFlows ?? []),
         flow,
       ]);
       const resolvedTimeRange = resolveTimeRangeForLastNSeconds(
@@ -110,7 +164,28 @@ export const HlsPlayer = () => {
       setTimerange(resolvedTimeRange);
       setMaxTimerange(newMaxTimeRange);
     }
-  }, [flow, childFlows.flows, loadingFlow, childFlows.isLoading]);
+  }, [flow, filteredChildFlows, loadingFlow, childFlows.isLoading]);
+
+  if (
+    flow &&
+    (flow.tags?.hls_exclude === "true" ||
+      flow.tags?.hls_exclude === true ||
+      flow.tags?.hls_exclude === "1" ||
+      flow.tags?.hls_exclude === 1)
+  ) {
+    return <div>Flow is excluded from HLS</div>;
+  }
+
+  if (
+    !loadingFlow &&
+    !childFlows.isLoading &&
+    !childFlowsSegmentsRaw.isLoading &&
+    !flowSegments.isLoading &&
+    !containsAudioOrVideoFlow(flow, filteredChildFlows) &&
+    (flow || filteredChildFlows)
+  ) {
+    return <div>Selected {type} don’t contain video or audio</div>;
+  }
 
   return !loadingFlow &&
     !flowSegments.isLoading &&
@@ -121,7 +196,7 @@ export const HlsPlayer = () => {
     flow ? (
       <OmakasePlayerTamsComponent
         flow={flow}
-        childFlows={childFlows.flows}
+        childFlows={filteredChildFlows}
         flowSegments={flowSegments.segments}
         childFlowsSegments={childFlowsSegments}
         timeRange={timerange}
@@ -139,4 +214,4 @@ export const HlsPlayer = () => {
   );
 };
 
-export default HlsPlayer;
+export default OmakaseHlsPlayer;

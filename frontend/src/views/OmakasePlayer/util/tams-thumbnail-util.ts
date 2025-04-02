@@ -1,5 +1,5 @@
-import { Flow, FlowSegment } from "../types/tams";
-import { ImageFlow } from "../types/tams/model/image-flow";
+import { Flow, FlowSegment } from "@byomakase/omakase-react-components";
+import { ImageFlow } from "@byomakase/omakase-react-components";
 import { TimeRangeUtil } from "./time-range-util";
 
 export class TAMSThumbnailUtil {
@@ -14,8 +14,7 @@ export class TAMSThumbnailUtil {
 
     imageFlows as ImageFlow[];
 
-    const lowestQualityImageFlow = imageFlows.reduce(
-      // @ts-ignore FIXME:
+    const lowestQualityImageFlow = imageFlows.reduce<ImageFlow | undefined>(
       (lowestQualityFlow: undefined | ImageFlow, currentFlow: ImageFlow) => {
         if (lowestQualityFlow === undefined) {
           return currentFlow;

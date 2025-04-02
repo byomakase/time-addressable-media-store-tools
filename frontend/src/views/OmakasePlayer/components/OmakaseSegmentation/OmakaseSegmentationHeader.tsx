@@ -1,7 +1,11 @@
-import { MarkerLane, PeriodMarker } from "@byomakase/omakase-player";
+import {
+  MarkerLane,
+  OmakasePlayer,
+  PeriodMarker,
+} from "@byomakase/omakase-player";
 import React, { useEffect, useState } from "react";
 import OmakaseExportModal from "../OmakaseModal/OmakaseExportModal";
-import { Flow, FlowSegment } from "../../types/tams";
+import { Flow, FlowSegment } from "@byomakase/omakase-react-components";
 
 type OmakaseSegmentationHeaderProps = {
   segmentationLanes: MarkerLane[];
@@ -10,6 +14,7 @@ type OmakaseSegmentationHeaderProps = {
   flows: Flow[];
   flowSegments: Map<string, FlowSegment[]>;
   markerOffset: number;
+  omakasePlayer: OmakasePlayer;
 };
 
 const OmakaseSegmentationHeader = ({
@@ -19,6 +24,7 @@ const OmakaseSegmentationHeader = ({
   flows,
   flowSegments,
   markerOffset,
+  omakasePlayer,
 }: OmakaseSegmentationHeaderProps) => {
   const segmentationNamesClassName =
     segmentationLanes.length < 3
@@ -98,14 +104,16 @@ const OmakaseSegmentationHeader = ({
         </div>
       )}
 
-      {source && (
-        <OmakaseExportModal
-          flows={flows}
-          source={source}
-          markerOffset={markerOffset}
-          exportDisabled={exportDisabled}
-        />
-      )}
+      {source &&
+        flows.find((flow) => flow.format === "urn:x-nmos:format:video") && (
+          <OmakaseExportModal
+            flows={flows}
+            source={source}
+            markerOffset={markerOffset}
+            exportDisabled={exportDisabled}
+            omakasePlayer={omakasePlayer}
+          />
+        )}
     </div>
   );
 };

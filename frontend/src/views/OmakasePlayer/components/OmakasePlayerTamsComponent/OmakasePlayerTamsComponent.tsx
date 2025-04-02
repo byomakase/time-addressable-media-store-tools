@@ -24,7 +24,11 @@ import {
   OmakaseTimeRangePicker,
   TimeRangeUtil,
 } from "@byomakase/omakase-react-components";
-import { Flow, FlowSegment, VideoFlow } from "../../types/tams";
+import {
+  Flow,
+  FlowSegment,
+  VideoFlow,
+} from "@byomakase/omakase-react-components";
 import {
   HIGHLIGHTED_PERIOD_MARKER_STYLE,
   MARKER_LANE_STYLE,
@@ -124,10 +128,6 @@ function resolveVideoInfo(
 
   const videoStartTimeAndFrameRate = sortedStartTimeAndFramerate.find(
     (timeAndFrameRate) => timeAndFrameRate.frameRate !== undefined
-  );
-
-  const requstedStartTime = TimeRangeUtil.timeMomentToSeconds(
-    TimeRangeUtil.parseTimeRange(requestedTimeRange).start!
   );
 
   if (videoStartTimeAndFrameRate === undefined) {
@@ -461,8 +461,8 @@ const OmakasePlayerTamsComponent = React.memo(
     );
 
     const videoLoadOptions: VideoLoadOptions = videoInfo.ffom
-      ? { ffom: videoInfo.ffom }
-      : {};
+      ? { protocol: "hls", ffom: videoInfo.ffom }
+      : { protocol: "hls" };
 
     timelineBuilderFlows.sort(flowFormatSorting);
 
@@ -590,20 +590,15 @@ const OmakasePlayerTamsComponent = React.memo(
                   <RowTemplate />
                   <EmptyTemplate />
 
-                  {timelineBuilderFlows.find(
-                    (flow) => flow.format === "urn:x-nmos:format:video"
-                  ) && (
-                    <OmakaseSegmentationHeader
-                      segmentationLanes={segementationLanes}
-                      onSegementationClickCallback={
-                        onSegementationClickCallback
-                      }
-                      source={source}
-                      flows={timelineBuilderFlows}
-                      flowSegments={timelineBuilderFlowSegments}
-                      markerOffset={videoInfo.markerOffset}
-                    />
-                  )}
+                  <OmakaseSegmentationHeader
+                    segmentationLanes={segementationLanes}
+                    onSegementationClickCallback={onSegementationClickCallback}
+                    omakasePlayer={omakasePlayer}
+                    source={source}
+                    flows={timelineBuilderFlows}
+                    flowSegments={timelineBuilderFlowSegments}
+                    markerOffset={videoInfo.markerOffset}
+                  />
 
                   <OmakaseMarkerListComponent
                     omakasePlayer={omakasePlayer}
@@ -637,9 +632,10 @@ const OmakasePlayerTamsComponent = React.memo(
                   segmentationLanes={segementationLanes}
                   source={source}
                   setSource={setSource}
+                  enableHotKeys={true}
                   constants={{
                     PERIOD_MARKER_STYLE: PERIOD_MARKER_STYLE,
-                    SELECTED_PERIOD_MARKER_STYLE:
+                    HIGHLIGHTED_PERIOD_MARKER_STYLE:
                       HIGHLIGHTED_PERIOD_MARKER_STYLE,
                     TIMELINE_LANE_STYLE: MARKER_LANE_STYLE,
                     MARKER_LANE_TEXT_LABEL_STYLE: MARKER_LANE_TEXT_LABEL_STYLE,
@@ -666,8 +662,8 @@ const OmakasePlayerTamsComponent = React.memo(
             <div className="player-wrapper">
               <OmakaseTimeRangePicker
                 numberOfSegments={5}
-                maxSliderRange={3600}
-                segmentSize={1000}
+                maxSliderRange={1500}
+                segmentSize={300}
                 timeRange={timeRange}
                 maxTimeRange={maxTimeRange}
                 onCheckmarkClickCallback={onCheckmarkClickCallback}
@@ -705,7 +701,8 @@ const OmakasePlayerTamsComponent = React.memo(
     // TODO: PoC only, needs improvement
     return (
       prevProps.flow.id === nextProps.flow.id &&
-      prevProps.timeRange === nextProps.timeRange
+      prevProps.timeRange === nextProps.timeRange &&
+      prevProps.childFlows?.length === nextProps.childFlows?.length
     );
   }
 );
