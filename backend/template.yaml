@@ -7,8 +7,8 @@ Metadata:
           default: Components
         Parameters:
           - DeployHlsApi
-          - DeployIngestMediaLive
-          - DeployIngestMediaConvert
+          - DeployIngestHls
+          - DeployIngestFfmpeg
       - Label:
           default: Configuration
         Parameters:
@@ -18,10 +18,10 @@ Metadata:
         default: The name of the CloudFormation stack that Deployed the TAMS API
       DeployHlsApi:
         default: Deploy HLS Endpoint?
-      DeployIngestMediaLive:
-        default: Deploy MediaLive Channel ingest?
-      DeployIngestMediaConvert:
-        default: Deploy MediaConvert Job ingest?
+      DeployIngestHls:
+        default: Deploy HLS ingest?
+      DeployIngestFfmpeg:
+        default: Deploy Ffmpeg ingest?
 
 Parameters:
   ApiStackName:
@@ -34,14 +34,14 @@ Parameters:
       - "No"
     Default: "No"
 
-  DeployIngestMediaLive:
+  DeployIngestHls:
     Type: String
     AllowedValues:
       - "Yes"
       - "No"
     Default: "No"
 
-  DeployIngestMediaConvert:
+  DeployIngestFfmpeg:
     Type: String
     AllowedValues:
       - "Yes"
@@ -51,13 +51,13 @@ Parameters:
 Conditions:
   DeployHlsApi: !Equals [!Ref DeployHlsApi, "Yes"]
 
-  DeployIngestMediaLive: !Equals [!Ref DeployIngestMediaLive, "Yes"]
+  DeployIngestHls: !Equals [!Ref DeployIngestHls, "Yes"]
 
-  DeployIngestMediaConvert: !Equals [!Ref DeployIngestMediaConvert, "Yes"]
+  DeployIngestFfmpeg: !Equals [!Ref DeployIngestFfmpeg, "Yes"]
 
-  DeployApi: !Or [!Condition DeployHlsApi, !Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
+  DeployHls: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls]
 
-  DeployIngest: !Or [!Condition DeployIngestMediaLive, !Condition DeployIngestMediaConvert]
+  DeployIngest: !Or [!Condition DeployIngestHls, !Condition DeployIngestFfmpeg]
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -97,7 +97,6 @@ Resources:
         - python3.13
       CompatibleArchitectures:
         - arm64
-    Condition: DeployApi
 
   CustomResourceFunction:
     Type: AWS::Serverless::Function
@@ -158,6 +157,30 @@ Resources:
                 Value: client_credentials
                 IsValueSecret: False
 
+  CodecsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AWS::StackName}-codecs
+      Type: String
+      DataType: text
+      Description: Codec mappings for HLS
+      Value: |
+        [
+          {
+            "tams": "audio/aac",
+            "hls": "mp4a"
+          },
+          {
+            "tams": "video/h264",
+            "hls": "avc1"
+          },
+          {
+            "tams": "text/vtt",
+            "hls": "webvtt"
+          }
+        ]
+    Condition: DeployHls
+
   HlsApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -174,6 +197,7 @@ Resources:
         AuthRoleName: !ImportValue
           Fn::Sub: ${ApiStackName}-AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+        CodecsParameterName: !Ref CodecsParameter
     Condition: DeployHlsApi
 
   IngestStack:
@@ -189,71 +213,96 @@ Resources:
           Fn::Sub: ${ApiStackName}-UserPoolClientId
         TokenUrl: !ImportValue
           Fn::Sub: ${ApiStackName}-TokenUrl
-        AuthRoleName: !ImportValue
-          Fn::Sub: ${ApiStackName}-AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
     Condition: DeployIngest
 
-  IngestMediaLiveStack:
+  IngestHlsStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: components/ingest-medialive/template.yaml
+      TemplateURL: components/ingest-hls/template.yaml
       Parameters:
+        UserPoolId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolId
+        ApiEndpoint: !ImportValue
+          Fn::Sub: ${ApiStackName}-ApiEndpoint
+        UserPoolClientId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolClientId
+        TokenUrl: !ImportValue
+          Fn::Sub: ${ApiStackName}-TokenUrl
         AuthRoleName: !ImportValue
           Fn::Sub: ${ApiStackName}-AuthRoleName
-        SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
-        SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
-        S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
-        S3IngestionFunctionArn: !GetAtt IngestStack.Outputs.S3IngestionFunctionArn
-        ParentStackName: !Ref AWS::StackName
-    Condition: DeployIngestMediaLive
+        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+        CodecsParameterName: !Ref CodecsParameter
+        TamsConnectionArn: !GetAtt TamsConnection.Arn
+        SqsSegmentIngestFunctionArn: !GetAtt IngestStack.Outputs.SqsSegmentIngestFunctionArn
+        SegmentIngestQueueUrl: !GetAtt IngestStack.Outputs.SegmentIngestQueueUrl
+        SegmentIngestQueueArn: !GetAtt IngestStack.Outputs.SegmentIngestQueueArn
+    Condition: DeployIngestHls
 
-  IngestMediaConvertStack:
+  IngestFfmpegStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: components/ingest-mediaconvert/template.yaml
+      TemplateURL: components/ingest-ffmpeg/template.yaml
       Parameters:
+        UserPoolId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolId
+        ApiEndpoint: !ImportValue
+          Fn::Sub: ${ApiStackName}-ApiEndpoint
+        UserPoolClientId: !ImportValue
+          Fn::Sub: ${ApiStackName}-UserPoolClientId
+        TokenUrl: !ImportValue
+          Fn::Sub: ${ApiStackName}-TokenUrl
         AuthRoleName: !ImportValue
           Fn::Sub: ${ApiStackName}-AuthRoleName
-        SfnFlowsFunctionRole: !GetAtt IngestStack.Outputs.SfnFlowsFunctionRole
-        SfnFlowsFunctionArn: !GetAtt IngestStack.Outputs.SfnFlowsFunctionArn
-        S3IngestionFunctionRole: !GetAtt IngestStack.Outputs.S3IngestionFunctionRole
-        S3IngestionFunctionArn: !GetAtt IngestStack.Outputs.S3IngestionFunctionArn
-    Condition: DeployIngestMediaConvert
+        OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+        TamsConnectionArn: !GetAtt TamsConnection.Arn
+        SqsSegmentIngestionFunctionRoleName: !GetAtt IngestStack.Outputs.SqsSegmentIngestionFunctionRoleName
+        SegmentIngestQueueUrl: !GetAtt IngestStack.Outputs.SegmentIngestQueueUrl
+        SegmentIngestQueueArn: !GetAtt IngestStack.Outputs.SegmentIngestQueueArn
+        EventBusName: !Ref ApiStackName
+        TamsMediaBucket: !ImportValue
+          Fn::Sub: ${ApiStackName}-MediaStorageBucket
+    Condition: DeployIngestFfmpeg
 
 Outputs:
-  HlsEndpoint:
+  HlsApiEndpoint:
     Value: !If
       - DeployHlsApi
       - !GetAtt HlsApiStack.Outputs.ApiEndpoint
       - ""
 
-  MlEndpoint:
+  HlsIngestEndpoint:
     Value: !If
-      - DeployIngestMediaLive
-      - !GetAtt IngestMediaLiveStack.Outputs.ApiEndpoint
+      - DeployIngestHls
+      - !GetAtt IngestHlsStack.Outputs.ApiEndpoint
       - ""
 
-  MlStartArn:
+  HlsIngestArn:
     Value: !If
-      - DeployIngestMediaLive
-      - !GetAtt IngestMediaLiveStack.Outputs.StartArn
+      - DeployIngestHls
+      - !GetAtt IngestHlsStack.Outputs.IngestHlsArn
       - ""
 
-  MlStopArn:
+  FfmpegEndpoint:
     Value: !If
-      - DeployIngestMediaLive
-      - !GetAtt IngestMediaLiveStack.Outputs.StopArn
+      - DeployIngestFfmpeg
+      - !GetAtt IngestFfmpegStack.Outputs.ApiEndpoint
       - ""
 
-  McEndpoint:
+  FfmpegCommandParameter:
     Value: !If
-      - DeployIngestMediaConvert
-      - !GetAtt IngestMediaConvertStack.Outputs.ApiEndpoint
+      - DeployIngestFfmpeg
+      - !GetAtt IngestFfmpegStack.Outputs.ParameterName
       - ""
 
-  MediaConvertBucketName:
+  FfmpegBatchArn:
     Value: !If
-      - DeployIngestMediaConvert
-      - !GetAtt IngestMediaConvertStack.Outputs.BucketName
+      - DeployIngestFfmpeg
+      - !GetAtt IngestFfmpegStack.Outputs.FfmpegBatchArn
+      - ""
+
+  FfmpegExportArn:
+    Value: !If
+      - DeployIngestFfmpeg
+      - !GetAtt IngestFfmpegStack.Outputs.FfmpegExportArn
       - ""

@@ -13,6 +13,8 @@ import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useSources } from "@/hooks/useSources";
 import { useState } from "react";
+import useStore from "@/stores/useStore";
+import { PAGE_SIZE_PREFERENCE } from "@/constants";
 
 const columnDefinitions = [
   {
@@ -20,7 +22,7 @@ const columnDefinitions = [
     header: "Id",
     cell: (item) => <Link to={`/sources/${item.id}`}>{item.id}</Link>,
     sortingField: "id",
-    minWidth: 340,
+    width: 310,
   },
   {
     id: "format",
@@ -39,7 +41,6 @@ const columnDefinitions = [
     header: "Description",
     cell: (item) => item.description,
     sortingField: "description",
-    minWidth: 240,
   },
   {
     id: "created_by",
@@ -85,13 +86,7 @@ const columnDefinitions = [
   },
 ];
 const collectionPreferencesProps = {
-  pageSizePreference: {
-    title: "Select page size",
-    options: [
-      { value: 10, label: "10 resources" },
-      { value: 20, label: "20 resources" },
-    ],
-  },
+  pageSizePreference: PAGE_SIZE_PREFERENCE,
   contentDisplayPreference: {
     title: "Column preferences",
     description: "Customize the columns visibility and order.",
@@ -107,24 +102,11 @@ const collectionPreferencesProps = {
 };
 
 const Sources = () => {
+  const preferences = useStore((state) => state.sourcesPreferences);
+  const setPreferences = useStore((state) => state.setSourcesPreferences);
+  const showHierarchy = useStore((state) => state.sourcesShowHierarchy);
+  const setShowHierarchy = useStore((state) => state.setSourcesShowHierarchy);
   const { sources, isLoading } = useSources();
-  const [showHierarchy, setShowHierarchy] = useState(true);
-  const [preferences, setPreferences] = useState({
-    pageSize: 10,
-    contentDisplay: [
-      { id: "id", visible: true },
-      { id: "label", visible: true },
-      { id: "description", visible: true },
-      { id: "format", visible: true },
-      { id: "created_by", visible: false },
-      { id: "updated_by", visible: false },
-      { id: "created", visible: true },
-      { id: "updated", visible: false },
-      { id: "tags", visible: false },
-      { id: "source_collection", visible: false },
-      { id: "collected_by", visible: false },
-    ],
-  });
   const { items, collectionProps, filterProps, paginationProps } =
     useCollection(isLoading ? [] : sources, {
       expandableRows: showHierarchy && {
@@ -151,12 +133,6 @@ const Sources = () => {
 
   return (
     <Table
-      {...collectionProps}
-      variant="borderless"
-      resizableColumns
-      loadingText="Loading resources"
-      loading={isLoading}
-      trackBy="id"
       header={
         <Header
           actions={
@@ -173,8 +149,14 @@ const Sources = () => {
           Sources
         </Header>
       }
+      {...collectionProps}
+      variant="borderless"
+      loadingText="Loading resources"
+      loading={isLoading}
+      trackBy="id"
       columnDefinitions={columnDefinitions}
       columnDisplay={preferences.contentDisplay}
+      contentDensity="compact"
       items={items}
       pagination={<Pagination {...paginationProps} />}
       filter={<TextFilter {...filterProps} />}

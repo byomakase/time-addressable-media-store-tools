@@ -13,9 +13,6 @@ Parameters:
   TokenUrl:
     Type: String
 
-  AuthRoleName:
-    Type: String
-
   OpenIdAuthLayerArn:
     Type: String
 
@@ -24,7 +21,7 @@ Transform: AWS::Serverless-2016-10-31
 Globals:
   Function:
     Tracing: Active
-    Timeout: 30
+    Timeout: 300
     MemorySize: 128
     Handler: app.lambda_handler
     Runtime: python3.13
@@ -32,38 +29,7 @@ Globals:
       - arm64
 
 Resources:
-  AuthRolePolicyIngest:
-    Type: AWS::IAM::RolePolicy
-    Properties:
-      RoleName: !Ref AuthRoleName
-      PolicyName: Ingest
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action:
-              - ssm:GetParameters
-            Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
-
-  MediaInfoLayer:
-    Type: AWS::Serverless::LayerVersion
-    Metadata:
-      BuildMethod: makefile
-      BuildArchitecture: arm64
-    Properties:
-      RetentionPolicy: Delete
-      ContentUri: layers/mediainfo
-      CompatibleRuntimes:
-        - python3.13
-      CompatibleArchitectures:
-        - arm64
-
-  S3IngestionFunction:
-
-    # checkov:skip=CKV_AWS_115
-    # checkov:skip=CKV_AWS_116
-    # checkov:skip=CKV_AWS_117
-    # checkov:skip=CKV_AWS_173
+  SqsSegmentIngestionFunction:
     Type: AWS::Serverless::Function
     Metadata:
       cfn_nag:
@@ -73,11 +39,15 @@ Resources:
           - id: W92
             reason: ReservedConcurrentExecutions not required
     Properties:
-      CodeUri: functions/s3-ingestion
+      CodeUri: functions/sqs-segment-ingestion
+      RecursiveLoop: Allow
       Layers:
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
         - !Ref OpenIdAuthLayerArn
       Environment:
         Variables:
+          POWERTOOLS_SERVICE_NAME: tams-tools
+          POWERTOOLS_METRICS_NAMESPACE: TAMS-Tools
           TAMS_ENDPOINT: !Ref ApiEndpoint
           TOKEN_URL: !Ref TokenUrl
           USER_POOL_ID: !Ref UserPoolId
@@ -91,52 +61,56 @@ Resources:
               Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
             - Effect: Allow
               Action:
-                - ssm:GetParameter
-                - ssm:PutParameter
-              Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+                - s3:ListBucket
+                - s3:GetObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::*
+              Condition:
+                StringEquals:
+                  s3:ResourceAccount: !Ref AWS::AccountId
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SegmentIngestQueue.Arn
+            Enabled: True
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
-  SfnFlowsFunction:
-
-    # checkov:skip=CKV_AWS_115
-    # checkov:skip=CKV_AWS_116
-    # checkov:skip=CKV_AWS_117
-    # checkov:skip=CKV_AWS_173
-    Type: AWS::Serverless::Function
+  SegmentIngestQueue:
+    Type: AWS::SQS::Queue
     Metadata:
       cfn_nag:
         rules_to_suppress:
-          - id: W89
-            reason: VPC not required
-          - id: W92
-            reason: ReservedConcurrentExecutions not required
+          - id: W48
+            reason: Encryption not required
     Properties:
-      CodeUri: functions/sfn-flows
-      Layers:
-        - !Ref MediaInfoLayer
-        - !Ref OpenIdAuthLayerArn
-      Environment:
-        Variables:
-          TAMS_ENDPOINT: !Ref ApiEndpoint
-          TOKEN_URL: !Ref TokenUrl
-          USER_POOL_ID: !Ref UserPoolId
-          CLIENT_ID: !Ref UserPoolClientId
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - cognito-idp:DescribeUserPoolClient
-              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SegmentIngestDLQ.Arn
+        maxReceiveCount: 1
+
+  SegmentIngestDLQ:
+    Type: AWS::SQS::Queue
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W48
+            reason: Encryption not required
+    Properties:
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 86400
 
 Outputs:
-  SfnFlowsFunctionArn:
-    Value: !GetAtt SfnFlowsFunction.Arn
+  SqsSegmentIngestFunctionArn:
+    Value: !GetAtt SqsSegmentIngestionFunction.Arn
 
-  SfnFlowsFunctionRole:
-    Value: !Ref SfnFlowsFunctionRole
+  SqsSegmentIngestionFunctionRoleName:
+    Value: !Ref SqsSegmentIngestionFunctionRole
 
-  S3IngestionFunctionArn:
-    Value: !GetAtt S3IngestionFunction.Arn
+  SegmentIngestQueueUrl:
+    Value: !Ref SegmentIngestQueue
 
-  S3IngestionFunctionRole:
-    Value: !Ref S3IngestionFunctionRole
+  SegmentIngestQueueArn:
+    Value: !GetAtt SegmentIngestQueue.Arn

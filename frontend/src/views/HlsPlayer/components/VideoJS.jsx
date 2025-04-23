@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 
-import qualitySelectorHls from "videojs-quality-selector-hls";
 import videojs from "video.js";
 
 const VideoJS = ({ options, onReady }) => {
@@ -14,13 +13,10 @@ const VideoJS = ({ options, onReady }) => {
       const videoElement = document.createElement("video-js");
       videoElement.classList.add("vjs-big-play-centered");
       videoRef.current.appendChild(videoElement);
-      !videojs.getPluginVersion("qualitySelectorHls") &&
-        videojs.registerPlugin("qualitySelectorHls", qualitySelectorHls);
       const player = (playerRef.current = videojs(videoElement, options, () => {
         console.log("player is ready");
         onReady && onReady(player);
       }));
-      player.qualitySelectorHls();
       // You could update an existing player in the `else` block here on prop change, for example:
     } else {
       const player = playerRef.current;
@@ -30,7 +26,6 @@ const VideoJS = ({ options, onReady }) => {
 
     return () => {
       if (playerRef.current && !playerRef.current.isDisposed()) {
-        videojs.deregisterPlugin("qualitySelectorHls");
         playerRef.current.dispose();
         playerRef.current = null;
       }

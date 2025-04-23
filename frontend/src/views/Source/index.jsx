@@ -2,14 +2,13 @@ import {
   Box,
   Button,
   Header,
-  Link,
   SpaceBetween,
   Spinner,
   Tabs,
 } from "@cloudscape-design/components";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { AWS_HLS_ENDPOINT } from "@/constants";
+import { AWS_HLS_API_ENDPOINT } from "@/constants";
 import CollectedBy from "@/components/CollectedBy";
 import Collection from "@/components/Collection";
 import EntityDetails from "@/components/EntityDetails";
@@ -33,14 +32,14 @@ const Source = () => {
         <Header variant="h2">
           <SpaceBetween size="xl" direction="horizontal">
             <span>Source details</span>
-            {AWS_HLS_ENDPOINT && (
-              <Link
-                href={`/#/player/sources/${sourceId}`}
-                variant="secondary"
-                external
+            {AWS_HLS_API_ENDPOINT && (
+              <Button
+                href={`/player/sources/${sourceId}`}
+                variant="inline-link"
+                onFollow={followLink}
               >
                 View HLS
-              </Link>
+              </Button>
             )}
             <Button
               href={`/diagram/sources/${sourceId}`}

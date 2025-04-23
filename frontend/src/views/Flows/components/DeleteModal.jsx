@@ -5,16 +5,49 @@ import {
   SpaceBetween,
   TextContent,
 } from "@cloudscape-design/components";
+import useStore from "@/stores/useStore";
+import { useDelete } from "@/hooks/useFlows";
 
 const DeleteModal = ({
   modalVisible,
   setModalVisible,
-  isDeleting,
-  deleteFlow,
+  selectedItems,
+  mutateFlows,
 }) => {
+  const { del, isDeleting } = useDelete();
+  const addAlertItems = useStore((state) => state.addAlertItems);
+  const delAlertItem = useStore((state) => state.delAlertItem);
+
+  const deleteFlow = async () => {
+    const promises = selectedItems.map((item) => del({ flowId: item.id }));
+    const id = crypto.randomUUID();
+    addAlertItems(
+      selectedItems.map((flow, n) => ({
+        type: "success",
+        dismissible: true,
+        dismissLabel: "Dismiss message",
+        content: (
+          <TextContent>
+            Flow {flow.id} is being deleted. This will happen asynchronously.
+            You may need to refresh to see the change.
+          </TextContent>
+        ),
+        id: `${id}-${n}`,
+        onDismiss: () => delAlertItem(`${id}-${n}`),
+      }))
+    );
+    await Promise.all(promises);
+    setModalVisible(false);
+    mutateFlows();
+  };
+
+  const handleDismiss = () => {
+    setModalVisible(false);
+  };
+
   return (
     <Modal
-      onDismiss={() => setModalVisible(false)}
+      onDismiss={handleDismiss}
       visible={modalVisible}
       footer={
         <Box float="right">
@@ -22,7 +55,7 @@ const DeleteModal = ({
             <Button
               variant="link"
               disabled={isDeleting}
-              onClick={() => setModalVisible(false)}
+              onClick={handleDismiss}
             >
               No
             </Button>

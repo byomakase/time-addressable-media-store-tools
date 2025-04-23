@@ -19,6 +19,9 @@ Parameters:
   OpenIdAuthLayerArn:
     Type: String
 
+  CodecsParameterName:
+    Type: String
+
 Transform: AWS::Serverless-2016-10-31
 
 Globals:
@@ -31,22 +34,17 @@ Globals:
     Architectures:
       - arm64
 
-  Api:
-    EndpointConfiguration:
-      Type: REGIONAL
-    TracingEnabled: true
-    MethodSettings:
-      - ResourcePath: /*
-        HttpMethod: '*'
-        DataTraceEnabled: True
-        LoggingLevel: INFO
+  HttpApi:
+    AccessLogSettings:
+      DestinationArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ApiLogGroup}
+      Format: $context.identity.sourceIp - - [$context.requestTime] "$context.httpMethod $context.routeKey $context.protocol" $context.status $context.responseLength $context.requestId $context.extendedRequestId
 
 Resources:
   AuthRolePolicyHls:
     Type: AWS::IAM::RolePolicy
     Properties:
       RoleName: !Ref AuthRoleName
-      PolicyName: HlsApi
+      PolicyName: !Ref AWS::StackName
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -56,21 +54,31 @@ Resources:
             Resource:
               - !GetAtt ApiHlsFunction.Arn
 
-  Api:
-    Type: AWS::Serverless::Api
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
     Metadata:
-      cfn-lint:
-        config:
-          ignore_checks:
-            - W1028
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: Encryption not required
     Properties:
-      OpenApiVersion: 3.0.1
-      StageName: Prod
-      Cors:
-        AllowMethods: '''*'''
-        AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
-        AllowOrigin: '''*'''
-      AlwaysDeploy: True
+      LogGroupName: !Sub /aws/vendedlogs/api/${AWS::StackName}
+      RetentionInDays: 30
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods:
+          - '*'
+        AllowHeaders:
+          - Content-Type
+          - X-Amz-Date
+          - Authorization
+          - X-Api-Key
+          - X-Amz-Security-Token
+        AllowOrigins:
+          - '*'
 
   ApiHlsFunction:
     Type: AWS::Serverless::Function
@@ -88,11 +96,14 @@ Resources:
         - !Ref OpenIdAuthLayerArn
       Environment:
         Variables:
+          POWERTOOLS_SERVICE_NAME: tams-tools
+          POWERTOOLS_METRICS_NAMESPACE: TAMS-Tools
           TAMS_ENDPOINT: !Ref ApiEndpoint
           TOKEN_URL: !Ref TokenUrl
           USER_POOL_ID: !Ref UserPoolId
           CLIENT_ID: !Ref UserPoolClientId
           DEFAULT_HLS_SEGMENTS: 150
+          CODEC_PARAMETER: !Ref CodecsParameterName
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -100,20 +111,31 @@ Resources:
               Action:
                 - cognito-idp:DescribeUserPoolClient
               Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${CodecsParameterName}
       Events:
         getSourceHls:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref Api
-            Path: /hls/sources/{sourceId}/output.m3u8
+            ApiId: !Ref Api
+            Path: /sources/{sourceId}/manifest.m3u8
             Method: get
         getFlowHls:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref Api
-            Path: /hls/flows/{flowId}/output.m3u8
+            ApiId: !Ref Api
+            Path: /flows/{flowId}/manifest.m3u8
+            Method: get
+        getSegmentsHls:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /flows/{flowId}/segments/manifest.m3u8
             Method: get
 
 Outputs:
   ApiEndpoint:
-    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Api.Stage}
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com

@@ -1,15 +1,14 @@
 import {
-  AWS_HLS_ENDPOINT,
+  AWS_HLS_API_ENDPOINT,
+  AWS_HLS_INGEST_ENDPOINT,
   AWS_IDENTITY_POOL_ID,
-  AWS_MC_ENDPOINT,
-  AWS_ML_ENDPOINT,
+  AWS_FFMPEG_ENDPOINT,
   AWS_REGION,
   AWS_TAMS_ENDPOINT,
   AWS_USER_POOL_CLIENT_WEB_ID,
   AWS_USER_POOL_ID,
 } from "@/constants";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { Mode, applyMode } from "@cloudscape-design/global-styles";
 
 import { Amplify } from "aws-amplify";
 import { ConsoleLogger } from "aws-amplify/utils";
@@ -19,6 +18,10 @@ import Flows from "@/views/Flows";
 import HlsPlayer from "@/views/HlsPlayer";
 import Home from "@/views/Home";
 import Layout from "@/views/Layout";
+import HlsIngestion from "@/views/HlsIngestion";
+import FfmpegExports from "@/views/FfmpegExports";
+import FfmpegRules from "@/views/FfmpegRules";
+import FfmpegJobs from "@/views/FfmpegJobs";
 import MediaConvertIngestion from "@/views/MediaConvertIngestion";
 import MediaLiveIngestion from "@/views/MediaLiveIngestion";
 import React from "react";
@@ -41,23 +44,17 @@ Amplify.configure({
         endpoint: AWS_TAMS_ENDPOINT,
         region: AWS_REGION,
       },
-      Hls: {
-        endpoint: AWS_HLS_ENDPOINT,
+      HlsIngest: {
+        endpoint: AWS_HLS_INGEST_ENDPOINT,
         region: AWS_REGION,
       },
-      MediaLive: {
-        endpoint: AWS_ML_ENDPOINT,
-        region: AWS_REGION,
-      },
-      MediaConvert: {
-        endpoint: AWS_MC_ENDPOINT,
+      Ffmpeg: {
+        endpoint: AWS_FFMPEG_ENDPOINT,
         region: AWS_REGION,
       },
     },
   },
 });
-
-applyMode(Mode.Dark);
 
 const App = () => {
   return (
@@ -74,16 +71,24 @@ const App = () => {
             <Route path=":flowId" element={<Flow />} />
           </Route>
           <Route path="diagram/:type/:id" element={<Diagram />} />
-          {AWS_ML_ENDPOINT && (
-            <Route path="channels" element={<MediaLiveIngestion />} />
+          {AWS_HLS_API_ENDPOINT && (
+            <Route path="player/:type/:id" element={<HlsPlayer />} />
           )}
-          {AWS_MC_ENDPOINT && (
-            <Route path="jobs" element={<MediaConvertIngestion />} />
+          {AWS_HLS_INGEST_ENDPOINT && (
+            <>
+              <Route path="workflows" element={<HlsIngestion />} />
+              <Route path="channels" element={<MediaLiveIngestion />} />
+              <Route path="jobs" element={<MediaConvertIngestion />} />
+            </>
+          )}
+          {AWS_FFMPEG_ENDPOINT && (
+            <>
+              <Route path="ffmpeg-exports" element={<FfmpegExports />} />
+              <Route path="ffmpeg-rules" element={<FfmpegRules />} />
+              <Route path="ffmpeg-jobs" element={<FfmpegJobs />} />
+            </>
           )}
         </Route>
-        {AWS_HLS_ENDPOINT && (
-          <Route path="player/:type/:id" element={<HlsPlayer />} />
-        )}
       </Routes>
     </HashRouter>
   );

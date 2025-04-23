@@ -1,27 +1,26 @@
+import { AWS_FFMPEG_ENDPOINT, PAGE_SIZE_PREFERENCE } from "@/constants";
 import {
   Box,
   Button,
   ButtonDropdown,
   CollectionPreferences,
-  FormField,
   Header,
-  Input,
-  Modal,
   Pagination,
   SpaceBetween,
   Table,
-  TextContent,
   TextFilter,
   Toggle,
 } from "@cloudscape-design/components";
 import DeleteModal from "./components/DeleteModal";
 import DeleteTimeRangeModal from "./components/DeleteTimeRangeModal";
-import { useDelete, useDeleteTimerange, useFlows } from "@/hooks/useFlows";
-
+import { useFlows } from "@/hooks/useFlows";
 import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useState } from "react";
 import useStore from "@/stores/useStore";
+import CreateExportModal from "./components/CreateExportModal";
+import CreateRuleModal from "./components/CreateRuleModal";
+import CreateJobModal from "./components/CreateJobModal";
 
 const columnDefinitions = [
   {
@@ -30,7 +29,7 @@ const columnDefinitions = [
     cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
     sortingField: "id",
     isRowHeader: true,
-    minWidth: 340,
+    width: 310,
   },
   {
     id: "label",
@@ -43,14 +42,12 @@ const columnDefinitions = [
     header: "Description",
     cell: (item) => item.description,
     sortingField: "description",
-    minWidth: 240,
   },
   {
     id: "format",
     header: "Format",
     cell: (item) => item.format,
     sortingField: "format",
-    minWidth: 240,
   },
   {
     id: "created_by",
@@ -150,13 +147,7 @@ const columnDefinitions = [
   },
 ];
 const collectionPreferencesProps = {
-  pageSizePreference: {
-    title: "Select page size",
-    options: [
-      { value: 10, label: "10 resources" },
-      { value: 20, label: "20 resources" },
-    ],
-  },
+  pageSizePreference: PAGE_SIZE_PREFERENCE,
   contentDisplayPreference: {
     title: "Column preferences",
     description: "Customize the columns visibility and order.",
@@ -172,39 +163,14 @@ const collectionPreferencesProps = {
 };
 
 const Flows = () => {
+  const preferences = useStore((state) => state.flowsPreferences);
+  const setPreferences = useStore((state) => state.setFlowsPreferences);
+  const showHierarchy = useStore((state) => state.flowsShowHierarchy);
+  const setShowHierarchy = useStore((state) => state.setFlowsShowHierarchy);
   const { flows, mutate, isLoading, isValidating } = useFlows();
-  const { del, isDeleting } = useDelete();
-  const { delTimerange, isDeletingTimerange } = useDeleteTimerange();
-  const [showHierarchy, setShowHierarchy] = useState(true);
-  const [preferences, setPreferences] = useState({
-    pageSize: 10,
-    contentDisplay: [
-      { id: "id", visible: true },
-      { id: "label", visible: true },
-      { id: "description", visible: true },
-      { id: "format", visible: true },
-      { id: "created_by", visible: false },
-      { id: "updated_by", visible: false },
-      { id: "created", visible: true },
-      { id: "tags", visible: false },
-      { id: "flow_collection", visible: false },
-      { id: "collected_by", visible: false },
-      { id: "source_id", visible: false },
-      { id: "metadata_version", visible: false },
-      { id: "generation", visible: false },
-      { id: "metadata_updated", visible: false },
-      { id: "segments_updated", visible: false },
-      { id: "read_only", visible: false },
-      { id: "codec", visible: false },
-      { id: "container", visible: false },
-      { id: "avg_bit_rate", visible: false },
-      { id: "max_bit_rate", visible: false },
-    ],
-  });
   const [modalVisible, setModalVisible] = useState(false);
   const [actionId, setActionId] = useState("");
-  const [timerange, setTimerange] = useState("");
-  const { items, collectionProps, filterProps, paginationProps } =
+  const { items, collectionProps, filterProps, paginationProps, actions } =
     useCollection(isValidating || isLoading ? [] : flows, {
       expandableRows: showHierarchy && {
         getId: (item) => item.id,
@@ -228,55 +194,7 @@ const Flows = () => {
       selection: {},
     });
   const { selectedItems } = collectionProps;
-  const addAlertItems = useStore((state) => state.addAlertItems);
-  const delAlertItem = useStore((state) => state.delAlertItem);
-
-  const deleteFlow = async () => {
-    const promises = selectedItems.map((item) => del({ flowId: item.id }));
-    const id = crypto.randomUUID();
-    addAlertItems(
-      selectedItems.map((flow, n) => ({
-        type: "success",
-        dismissible: true,
-        dismissLabel: "Dismiss message",
-        content: (
-          <TextContent>
-            Flow {flow.id} is being deleted. This will happen asynchronously.
-            You may need to refresh to see the change.
-          </TextContent>
-        ),
-        id: `${id}-${n}`,
-        onDismiss: () => delAlertItem(`${id}-${n}`),
-      }))
-    );
-    await Promise.all(promises);
-    setModalVisible(false);
-  };
-
-  const deleteTimerange = async () => {
-    const promises = selectedItems.map((item) =>
-      delTimerange({ flowId: item.id, timerange })
-    );
-    const id = crypto.randomUUID();
-    addAlertItems(
-      selectedItems.map((flow, n) => ({
-        type: "success",
-        dismissible: true,
-        dismissLabel: "Dismiss message",
-        content: (
-          <TextContent>
-            Flow segments on flow {flow.id} within the timerange {timerange} are
-            being deleted. This will happen asynchronously...
-          </TextContent>
-        ),
-        id: `${id}-${n}`,
-        onDismiss: () => delAlertItem(`${id}-${n}`),
-      }))
-    );
-    await Promise.all(promises);
-    setTimerange("");
-    setModalVisible(false);
-  };
+  const { setSelectedItems } = actions;
 
   const handleOnClick = ({ detail }) => {
     setActionId(detail.id);
@@ -286,13 +204,6 @@ const Flows = () => {
   return (
     <>
       <Table
-        {...collectionProps}
-        variant="borderless"
-        resizableColumns
-        loadingText="Loading resources"
-        loading={isValidating || isLoading}
-        trackBy="id"
-        selectionType="multi"
         header={
           <Header
             actions={
@@ -301,15 +212,10 @@ const Flows = () => {
                 direction="horizontal"
                 alignItems="center"
               >
-                <Toggle
-                  onChange={({ detail }) => setShowHierarchy(detail.checked)}
-                  checked={showHierarchy}
-                >
-                  Hierarchical View
-                </Toggle>
                 <ButtonDropdown
                   onItemClick={handleOnClick}
                   disabled={selectedItems.length === 0}
+                  expandableGroups
                   items={[
                     {
                       text: "Delete",
@@ -321,6 +227,34 @@ const Flows = () => {
                       id: "timerange",
                       disabled: !(selectedItems.length > 0),
                     },
+                    AWS_FFMPEG_ENDPOINT
+                      ? {
+                          text: "FFmpeg",
+                          id: "ffmpeg",
+                          disabled:
+                            selectedItems.length === 0 ||
+                            selectedItems.some((item) => !item.container),
+                          disabledReason:
+                            selectedItems.some((item) => !item.container) &&
+                            "The container property must have a value on all selected flows.",
+                          items: [
+                            {
+                              text: "Create FFmpeg Export",
+                              id: "create-export",
+                            },
+                            {
+                              text: "Create FFmpeg Rule",
+                              id: "create-rule",
+                              disabled: selectedItems.length !== 1,
+                            },
+                            {
+                              text: "Create FFmpeg Job",
+                              id: "create-job",
+                              disabled: selectedItems.length !== 1,
+                            },
+                          ],
+                        }
+                      : {},
                   ]}
                 >
                   Actions
@@ -331,14 +265,27 @@ const Flows = () => {
                   onClick={mutate}
                   disabled={isValidating || isLoading}
                 />
+                <Toggle
+                  onChange={({ detail }) => setShowHierarchy(detail.checked)}
+                  checked={showHierarchy}
+                >
+                  Hierarchical View
+                </Toggle>
               </SpaceBetween>
             }
           >
             Flows
           </Header>
         }
+        {...collectionProps}
+        variant="borderless"
+        loadingText="Loading resources"
+        loading={isValidating || isLoading}
+        trackBy="id"
+        selectionType="multi"
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
+        contentDensity="compact"
         items={items}
         pagination={<Pagination {...paginationProps} />}
         filter={<TextFilter {...filterProps} />}
@@ -356,18 +303,43 @@ const Flows = () => {
             <DeleteModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              isDeleting={isDeleting}
-              deleteFlow={deleteFlow}
+              selectedItems={selectedItems}
+              mutateFlows={mutate}
             />
           ),
           timerange: (
             <DeleteTimeRangeModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              isDeletingTimerange={isDeletingTimerange}
-              deleteTimerange={deleteTimerange}
-              timerange={timerange}
-              setTimerange={setTimerange}
+              selectedItems={selectedItems}
+            />
+          ),
+          "create-export": (
+            <CreateExportModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedFlowIds={selectedItems.map((item) => item.id)}
+              mutateFlows={mutate}
+            />
+          ),
+          "create-rule": (
+            <CreateRuleModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedFlowId={
+                selectedItems.length > 0 ? selectedItems[0].id : ""
+              }
+              mutateFlows={mutate}
+            />
+          ),
+          "create-job": (
+            <CreateJobModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedFlowId={
+                selectedItems.length > 0 ? selectedItems[0].id : ""
+              }
+              mutateFlows={mutate}
             />
           ),
         }[actionId]

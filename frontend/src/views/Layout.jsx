@@ -1,4 +1,4 @@
-import { AWS_MC_ENDPOINT, AWS_ML_ENDPOINT } from "@/constants";
+import { AWS_FFMPEG_ENDPOINT, AWS_HLS_INGEST_ENDPOINT } from "@/constants";
 import {
   AppLayout,
   BreadcrumbGroup,
@@ -76,25 +76,49 @@ const Layout = () => {
                   { type: "link", text: "Flows", href: "/flows" },
                 ],
               },
-              AWS_MC_ENDPOINT || AWS_ML_ENDPOINT
+              AWS_HLS_INGEST_ENDPOINT
                 ? {
                     type: "section",
-                    text: "Ingestion",
+                    text: "Ingest",
                     items: [
-                      AWS_ML_ENDPOINT
-                        ? {
-                            type: "link",
-                            text: "MediaLive Channels",
-                            href: "/channels",
-                          }
-                        : {},
-                      AWS_MC_ENDPOINT
-                        ? {
-                            type: "link",
-                            text: "MediaConvert Jobs",
-                            href: "/jobs",
-                          }
-                        : {},
+                      {
+                        type: "link",
+                        text: "MediaLive Channels",
+                        href: "/channels",
+                      },
+                      {
+                        type: "link",
+                        text: "MediaConvert Jobs",
+                        href: "/jobs",
+                      },
+                      {
+                        type: "link",
+                        text: "HLS Ingests",
+                        href: "/workflows",
+                      },
+                    ],
+                  }
+                : {},
+              AWS_FFMPEG_ENDPOINT
+                ? {
+                    type: "section",
+                    text: "FFmpeg",
+                    items: [
+                      {
+                        type: "link",
+                        text: "Export",
+                        href: "/ffmpeg-exports",
+                      },
+                      {
+                        type: "link",
+                        text: "Rules",
+                        href: "/ffmpeg-rules",
+                      },
+                      {
+                        type: "link",
+                        text: "Jobs",
+                        href: "/ffmpeg-jobs",
+                      },
                     ],
                   }
                 : {},
