@@ -2,6 +2,7 @@ import json
 import os
 import time
 from urllib.parse import urlparse
+from fractions import Fraction
 
 import boto3
 import m3u8
@@ -24,6 +25,7 @@ from aws_lambda_powertools.utilities.idempotency.persistence.datarecord import (
     DataRecord,
 )
 from mediatimestamp.immutable import TimeRange, Timestamp
+from ffprobe import ffprobe_link
 
 tracer = Tracer()
 logger = Logger()
@@ -32,6 +34,7 @@ persistence_layer = DynamoDBPersistenceLayer(table_name=os.environ["IDEMPOTENCY_
 batch_processor = BatchProcessor(event_type=EventType.SQS)
 
 
+@tracer.capture_method(capture_response=False)
 def idempotency_hook(response: dict, idempotent_data: DataRecord) -> dict:
     logger.warning(
         "Idempotency blocked processing",
@@ -87,6 +90,16 @@ def get_file(source: str) -> bytes:
 
 
 @tracer.capture_method(capture_response=False)
+def extract_segment_timerange(start_ts: Timestamp, segment_uri: str) -> TimeRange:
+    probe_result = ffprobe_link(segment_uri) or {}
+    probe_stream = probe_result.get("streams", [{}])[0]
+    duration = Timestamp.from_count(
+        probe_stream["duration_ts"], 1 / Fraction(probe_stream["time_base"])
+    )
+    return TimeRange(start_ts, start_ts + duration, TimeRange.INCLUDE_START)
+
+
+@tracer.capture_method(capture_response=False)
 def process_segment(
     last_timestamp: Timestamp,
     segment: dict,
@@ -94,24 +107,21 @@ def process_segment(
     manifest_path: str,
     segments: list,
 ) -> Timestamp:
-    segment_start = last_timestamp
-    segment_end = Timestamp.from_nanosec(
-        segment_start.to_nanosec() + (segment.duration * 1000000000)
+    segment_uri = (
+        segment.uri
+        if segment.uri.startswith("http")
+        else f"{manifest_path}/{segment.uri}"
     )
-    timerange = TimeRange(segment_start, segment_end, TimeRange.INCLUDE_START)
+    timerange = extract_segment_timerange(last_timestamp, segment_uri)
     segment_dict = {
         "flowId": flow_id,
         "timerange": str(timerange),
-        "uri": (
-            segment.uri
-            if segment.uri.startswith("http")
-            else f"{manifest_path}/{segment.uri}"
-        ),
+        "uri": segment_uri,
     }
     if segment.byterange:
         segment_dict["byterange"] = segment.byterange
     segments.append(segment_dict)
-    return segment_end
+    return timerange.end
 
 
 @idempotent_function(
@@ -190,6 +200,7 @@ def record_handler(record: SQSRecord) -> None:
 @tracer.capture_lambda_handler(capture_response=False)
 # pylint: disable=unused-argument
 def lambda_handler(event: SQSEvent, context: LambdaContext) -> dict:
+    idempotency_config.register_lambda_context(context)
     return process_partial_response(
         event=event,
         record_handler=record_handler,
