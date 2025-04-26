@@ -4,6 +4,7 @@ import {
   Button,
   ButtonDropdown,
   CollectionPreferences,
+  CopyToClipboard,
   Header,
   Pagination,
   SpaceBetween,
@@ -26,7 +27,18 @@ const columnDefinitions = [
   {
     id: "id",
     header: "Id",
-    cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
+    cell: (item) => (
+      <>
+        <Link to={`/flows/${item.id}`}>{item.id}</Link>
+        <CopyToClipboard
+          copyButtonAriaLabel="Copy Id"
+          copyErrorText="Id failed to copy"
+          copySuccessText="Id copied"
+          textToCopy={item.id}
+          variant="icon"
+        />
+      </>
+    ),
     sortingField: "id",
     isRowHeader: true,
     width: 310,
@@ -167,11 +179,11 @@ const Flows = () => {
   const setPreferences = useStore((state) => state.setFlowsPreferences);
   const showHierarchy = useStore((state) => state.flowsShowHierarchy);
   const setShowHierarchy = useStore((state) => state.setFlowsShowHierarchy);
-  const { flows, mutate, isLoading, isValidating } = useFlows();
+  const { flows, mutate, isLoading } = useFlows();
   const [modalVisible, setModalVisible] = useState(false);
   const [actionId, setActionId] = useState("");
   const { items, collectionProps, filterProps, paginationProps, actions } =
-    useCollection(isValidating || isLoading ? [] : flows, {
+    useCollection(isLoading ? [] : flows, {
       expandableRows: showHierarchy && {
         getId: (item) => item.id,
         getParentId: (item) =>
@@ -263,7 +275,7 @@ const Flows = () => {
                   iconName="refresh"
                   variant="link"
                   onClick={mutate}
-                  disabled={isValidating || isLoading}
+                  disabled={isLoading}
                 />
                 <Toggle
                   onChange={({ detail }) => setShowHierarchy(detail.checked)}
@@ -280,7 +292,7 @@ const Flows = () => {
         {...collectionProps}
         variant="borderless"
         loadingText="Loading resources"
-        loading={isValidating || isLoading}
+        loading={isLoading}
         trackBy="id"
         selectionType="multi"
         columnDefinitions={columnDefinitions}

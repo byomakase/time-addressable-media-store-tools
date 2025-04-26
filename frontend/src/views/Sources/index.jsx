@@ -1,6 +1,7 @@
 import {
   Box,
   CollectionPreferences,
+  CopyToClipboard,
   Header,
   Pagination,
   SpaceBetween,
@@ -12,7 +13,6 @@ import {
 import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useSources } from "@/hooks/useSources";
-import { useState } from "react";
 import useStore from "@/stores/useStore";
 import { PAGE_SIZE_PREFERENCE } from "@/constants";
 
@@ -20,8 +20,20 @@ const columnDefinitions = [
   {
     id: "id",
     header: "Id",
-    cell: (item) => <Link to={`/sources/${item.id}`}>{item.id}</Link>,
+    cell: (item) => (
+      <>
+        <Link to={`/sources/${item.id}`}>{item.id}</Link>
+        <CopyToClipboard
+          copyButtonAriaLabel="Copy Id"
+          copyErrorText="Id failed to copy"
+          copySuccessText="Id copied"
+          textToCopy={item.id}
+          variant="icon"
+        />
+      </>
+    ),
     sortingField: "id",
+    isRowHeader: true,
     width: 310,
   },
   {

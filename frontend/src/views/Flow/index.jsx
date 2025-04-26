@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  CopyToClipboard,
   Header,
   SpaceBetween,
   Spinner,
@@ -34,13 +35,22 @@ const Flow = () => {
           <SpaceBetween size="xl" direction="horizontal">
             <span>Flow details</span>
             {AWS_HLS_API_ENDPOINT && (
-              <Button
-                href={`/player/flows/${flowId}`}
-                variant="inline-link"
-                onFollow={followLink}
-              >
-                View HLS
-              </Button>
+              <>
+                <Button
+                  href={`/player/flows/${flowId}`}
+                  variant="inline-link"
+                  onFollow={followLink}
+                >
+                  View HLS
+                </Button>
+                <CopyToClipboard
+                  copyButtonAriaLabel="Copy Manifest link"
+                  copyErrorText="Link failed to copy"
+                  copySuccessText="Link copied"
+                  textToCopy={`${AWS_HLS_API_ENDPOINT}/flows/${flowId}/manifest.m3u8`}
+                  variant="icon"
+                />
+              </>
             )}
             <Button
               href={`/diagram/flows/${flowId}`}
