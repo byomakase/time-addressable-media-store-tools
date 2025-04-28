@@ -35,7 +35,7 @@ const Flow = () => {
           <SpaceBetween size="xl" direction="horizontal">
             <span>Flow details</span>
             {AWS_HLS_API_ENDPOINT && (
-              <>
+              <span>
                 <Button
                   href={`/player/flows/${flowId}`}
                   variant="inline-link"
@@ -50,7 +50,7 @@ const Flow = () => {
                   textToCopy={`${AWS_HLS_API_ENDPOINT}/flows/${flowId}/manifest.m3u8`}
                   variant="icon"
                 />
-              </>
+              </span>
             )}
             <Button
               href={`/diagram/flows/${flowId}`}

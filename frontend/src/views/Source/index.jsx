@@ -34,7 +34,7 @@ const Source = () => {
           <SpaceBetween size="xl" direction="horizontal">
             <span>Source details</span>
             {AWS_HLS_API_ENDPOINT && (
-              <>
+              <span>
                 <Button
                   href={`/player/sources/${sourceId}`}
                   variant="inline-link"
@@ -49,7 +49,7 @@ const Source = () => {
                   textToCopy={`${AWS_HLS_API_ENDPOINT}/sources/${sourceId}/manifest.m3u8`}
                   variant="icon"
                 />
-              </>
+              </span>
             )}
             <Button
               href={`/diagram/sources/${sourceId}`}
