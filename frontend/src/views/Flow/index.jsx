@@ -37,7 +37,7 @@ const Flow = () => {
             {AWS_HLS_API_ENDPOINT && (
               <span>
                 <Button
-                  href={`/player/flows/${flowId}`}
+                  href={`/hlsplayer/flows/${flowId}`}
                   variant="inline-link"
                   onFollow={followLink}
                 >

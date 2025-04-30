@@ -36,7 +36,7 @@ const Source = () => {
             {AWS_HLS_API_ENDPOINT && (
               <span>
                 <Button
-                  href={`/player/sources/${sourceId}`}
+                  href={`/hlsplayer/sources/${sourceId}`}
                   variant="inline-link"
                   onFollow={followLink}
                 >

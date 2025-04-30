@@ -72,7 +72,7 @@ const App = () => {
           </Route>
           <Route path="diagram/:type/:id" element={<Diagram />} />
           {AWS_HLS_API_ENDPOINT && (
-            <Route path="player/:type/:id" element={<HlsPlayer />} />
+            <Route path="hlsplayer/:type/:id" element={<HlsPlayer />} />
           )}
           {AWS_HLS_INGEST_ENDPOINT && (
             <>
