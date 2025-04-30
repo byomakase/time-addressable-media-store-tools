@@ -1,16 +1,15 @@
 import { Box, SpaceBetween, Table } from "@cloudscape-design/components";
 
+import { SEGMENT_COUNT } from "@/constants";
 import parseTimerange from "@/utils/parseTimerange";
-import { useSegments } from "@/hooks/useSegments";
-
-// const { start, end } = parseTimerange(entity.timerange);
+import { useLastN } from "@/hooks/useSegments";
 
 const SegmentsTab = ({ flowId }) => {
-  const { segments, isLoading: loadingSegments } = useSegments(flowId);
+  const { segments, isLoading: loadingSegments } = useLastN(flowId, SEGMENT_COUNT);
 
   return (
     <SpaceBetween size="xs">
-      <i>Showing a maxiumum of 30 segments</i>
+      <i>Showing last {SEGMENT_COUNT} segments</i>
       <Table
         trackBy="object_id"
         variant="borderless"

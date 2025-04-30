@@ -24,6 +24,7 @@ export const PAGE_SIZE_PREFERENCE = {
   ],
 };
 export const TAMS_PAGE_LIMIT = 300;
+export const SEGMENT_COUNT = 30;
 export const STATUS_MAPPINGS = {
   ABORTED: "warning",
   CANCELED: "warning",

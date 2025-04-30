@@ -1,8 +1,7 @@
-import { useApi } from "@/hooks/useApi";
 import useSWR from "swr";
+import paginationFetcher from "@/utils/paginationFetcher";
 
 export const useSegments = (flowId) => {
-  const { get } = useApi();
   const {
     data: response,
     mutate,
@@ -11,14 +10,30 @@ export const useSegments = (flowId) => {
     isValidating,
   } = useSWR(
     `/flows/${flowId}/segments`,
-    (path) => get(`${path}?accept_get_urls=&reverse_order=true`),
+    paginationFetcher
+  );
+
+  return {
+    segments: response?.data,
+    mutate,
+    isLoading,
+    isValidating,
+    error,
+  };
+};
+
+export const useLastN = (flowId, n) => {
+  const { data, mutate, error, isLoading, isValidating } = useSWR(
+    `/flows/${flowId}/segments`,
+    (path) =>
+      paginationFetcher(`${path}?limit=${n}&accept_get_urls=&reverse_order=true`, 60),
     {
       refreshInterval: 3000,
     }
   );
 
   return {
-    segments: response?.data,
+    segments: data,
     mutate,
     isLoading,
     isValidating,
