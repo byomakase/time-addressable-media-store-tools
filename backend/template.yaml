@@ -213,7 +213,11 @@ Resources:
           Fn::Sub: ${ApiStackName}-UserPoolClientId
         TokenUrl: !ImportValue
           Fn::Sub: ${ApiStackName}-TokenUrl
+        AuthRoleName: !ImportValue
+          Fn::Sub: ${ApiStackName}-AuthRoleName
         OpenIdAuthLayerArn: !Ref OpenIdAuthLayer
+        TamsConnectionArn: !GetAtt TamsConnection.Arn
+        ParentStackName: !Ref AWS::StackName
     Condition: DeployIngest
 
   IngestHlsStack:
@@ -269,6 +273,12 @@ Outputs:
     Value: !If
       - DeployHlsApi
       - !GetAtt HlsApiStack.Outputs.ApiEndpoint
+      - ""
+
+  CreateNewFlowArn:
+    Value: !If
+      - DeployIngest
+      - !GetAtt IngestStack.Outputs.CreateNewFlowArn
       - ""
 
   HlsIngestEndpoint:
