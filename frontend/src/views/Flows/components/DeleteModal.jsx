@@ -13,7 +13,6 @@ const DeleteModal = ({
   modalVisible,
   setModalVisible,
   selectedItems,
-  mutateFlows,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { del } = useDelete();
@@ -32,7 +31,6 @@ const DeleteModal = ({
         content: (
           <TextContent>
             Flow {flow.id} is being deleted. This will happen asynchronously.
-            You may need to refresh to see the change.
           </TextContent>
         ),
         id: `${id}-${n}`,
@@ -42,7 +40,6 @@ const DeleteModal = ({
     await Promise.all(promises);
     setIsDeleting(false);
     setModalVisible(false);
-    mutateFlows();
   };
 
   const handleDismiss = () => {

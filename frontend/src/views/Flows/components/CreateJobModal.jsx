@@ -22,7 +22,6 @@ const CreateJobModal = ({
   modalVisible,
   setModalVisible,
   selectedFlowId,
-  mutateFlows,
 }) => {
   const [commands, setCommands] = useState([]);
   const [timerange, setTimerange] = useState("");
@@ -89,7 +88,6 @@ const CreateJobModal = ({
     });
     handleDismiss();
     setIsSubmitting(false);
-    mutateFlows();
   };
 
   return (

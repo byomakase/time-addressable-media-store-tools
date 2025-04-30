@@ -34,7 +34,7 @@ const DeleteTimeRangeModal = ({
         content: (
           <TextContent>
             Flow segments on flow {flow.id} within the timerange {timerange} are
-            being deleted. This will happen asynchronously...
+            being deleted. This will happen asynchronously.
           </TextContent>
         ),
         id: `${id}-${n}`,

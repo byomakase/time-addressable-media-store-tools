@@ -6,7 +6,10 @@ import paginationFetcher from "@/utils/paginationFetcher";
 export const useFlows = () => {
   const { data, mutate, error, isLoading, isValidating } = useSWR(
     "/flows?limit=300",
-    paginationFetcher
+    paginationFetcher,
+    {
+      refreshInterval: 3000,
+    }
   );
 
   return {

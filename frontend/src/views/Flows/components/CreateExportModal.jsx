@@ -20,7 +20,6 @@ const CreateExportModal = ({
   modalVisible,
   setModalVisible,
   selectedFlowIds,
-  mutateFlows,
 }) => {
   const [commands, setCommands] = useState([]);
   const [timerange, setTimerange] = useState("");
@@ -76,7 +75,6 @@ const CreateExportModal = ({
     });
     handleDismiss();
     setIsSubmitting(false);
-    mutateFlows();
   };
 
   return (

@@ -179,10 +179,10 @@ const Flows = () => {
   const setPreferences = useStore((state) => state.setFlowsPreferences);
   const showHierarchy = useStore((state) => state.flowsShowHierarchy);
   const setShowHierarchy = useStore((state) => state.setFlowsShowHierarchy);
-  const { flows, mutate, isLoading } = useFlows();
+  const { flows, isLoading } = useFlows();
   const [modalVisible, setModalVisible] = useState(false);
   const [actionId, setActionId] = useState("");
-  const { items, collectionProps, filterProps, paginationProps, actions } =
+  const { items, collectionProps, filterProps, paginationProps } =
     useCollection(isLoading ? [] : flows, {
       expandableRows: showHierarchy && {
         getId: (item) => item.id,
@@ -211,7 +211,6 @@ const Flows = () => {
       selection: {},
     });
   const { selectedItems } = collectionProps;
-  const { setSelectedItems } = actions;
 
   const handleOnClick = ({ detail }) => {
     setActionId(detail.id);
@@ -276,12 +275,6 @@ const Flows = () => {
                 >
                   Actions
                 </ButtonDropdown>
-                <Button
-                  iconName="refresh"
-                  variant="link"
-                  onClick={mutate}
-                  disabled={isLoading}
-                />
                 <Toggle
                   onChange={({ detail }) => setShowHierarchy(detail.checked)}
                   checked={showHierarchy}
@@ -321,7 +314,6 @@ const Flows = () => {
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
               selectedItems={selectedItems}
-              mutateFlows={mutate}
             />
           ),
           timerange: (
@@ -336,7 +328,6 @@ const Flows = () => {
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
               selectedFlowIds={selectedItems.map((item) => item.id)}
-              mutateFlows={mutate}
             />
           ),
           "create-rule": (
@@ -346,7 +337,6 @@ const Flows = () => {
               selectedFlowId={
                 selectedItems.length > 0 ? selectedItems[0].id : ""
               }
-              mutateFlows={mutate}
             />
           ),
           "create-job": (
@@ -356,7 +346,6 @@ const Flows = () => {
               selectedFlowId={
                 selectedItems.length > 0 ? selectedItems[0].id : ""
               }
-              mutateFlows={mutate}
             />
           ),
         }[actionId]

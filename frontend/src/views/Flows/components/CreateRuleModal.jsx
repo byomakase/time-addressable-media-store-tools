@@ -22,7 +22,6 @@ const CreateRuleModal = ({
   modalVisible,
   setModalVisible,
   selectedFlowId,
-  mutateFlows,
 }) => {
   const [commands, setCommands] = useState([]);
   const [outputFlow, setoutputFlow] = useState("");
@@ -85,7 +84,6 @@ const CreateRuleModal = ({
     });
     handleDismiss();
     setIsSubmitting(false);
-    mutateFlows();
   };
 
   return (
