@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -14,11 +15,13 @@ const DeleteModal = ({
   selectedItems,
   mutateFlows,
 }) => {
-  const { del, isDeleting } = useDelete();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { del } = useDelete();
   const addAlertItems = useStore((state) => state.addAlertItems);
   const delAlertItem = useStore((state) => state.delAlertItem);
 
   const deleteFlow = async () => {
+    setIsDeleting(true);
     const promises = selectedItems.map((item) => del({ flowId: item.id }));
     const id = crypto.randomUUID();
     addAlertItems(
@@ -37,6 +40,7 @@ const DeleteModal = ({
       }))
     );
     await Promise.all(promises);
+    setIsDeleting(false);
     setModalVisible(false);
     mutateFlows();
   };
