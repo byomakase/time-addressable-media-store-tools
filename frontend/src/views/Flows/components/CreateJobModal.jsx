@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import useStore from "@/stores/useStore";
 import { fetchAuthSession } from "aws-amplify/auth";
-import { AWS_REGION, AWS_FFMPEG_PARAMETER } from "@/constants";
+import { AWS_REGION, AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
 import { useJobStart } from "@/hooks/useFfmpeg";
 import createFFmegFlow from "@/utils/createFFmegFlow";
 
@@ -37,7 +37,7 @@ const CreateJobModal = ({
     const fetchCommands = async () => {
       const data = await fetchAuthSession().then((session) =>
         new SSMClient({ region: AWS_REGION, credentials: session.credentials })
-          .send(new GetParameterCommand({ Name: AWS_FFMPEG_PARAMETER }))
+          .send(new GetParameterCommand({ Name: AWS_FFMPEG_COMMANDS_PARAMETER }))
           .then((response) => JSON.parse(response.Parameter.Value))
       );
       setCommands(

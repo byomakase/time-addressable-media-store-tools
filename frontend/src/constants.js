@@ -8,7 +8,7 @@ export const AWS_HLS_API_ENDPOINT = import.meta.env.VITE_APP_AWS_HLS_API_ENDPOIN
 export const AWS_HLS_INGEST_ENDPOINT = import.meta.env.VITE_APP_AWS_HLS_INGEST_ENDPOINT;
 export const AWS_HLS_INGEST_ARN = import.meta.env.VITE_APP_AWS_HLS_INGEST_ARN;
 export const AWS_FFMPEG_ENDPOINT = import.meta.env.VITE_APP_AWS_FFMPEG_ENDPOINT;
-export const AWS_FFMPEG_PARAMETER = import.meta.env.VITE_APP_AWS_FFMPEG_PARAMETER;
+export const AWS_FFMPEG_COMMANDS_PARAMETER = import.meta.env.VITE_APP_AWS_FFMPEG_COMMANDS_PARAMETER;
 export const AWS_FFMPEG_BATCH_ARN = import.meta.env.VITE_APP_AWS_FFMPEG_BATCH_ARN;
 export const AWS_FFMPEG_EXPORT_ARN = import.meta.env.VITE_APP_AWS_FFMPEG_EXPORT_ARN;
 /************* END OF ENVIRONMENT VARIABLES **************/
