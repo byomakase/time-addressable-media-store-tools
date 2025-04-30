@@ -34,24 +34,6 @@ const MediaConvertIngestion = () => {
       { id: "button", visible: true },
     ],
   };
-  const { items, collectionProps, filterProps, paginationProps } =
-    useCollection(isLoading ? [] : jobs, {
-      filtering: {
-        empty: (
-          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No jobs</b>
-          </Box>
-        ),
-        noMatch: (
-          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No matches</b>
-          </Box>
-        ),
-      },
-      pagination: { pageSize: preferences.pageSize },
-      sorting: {},
-      selection: {},
-    });
   const columnDefinitions = [
     {
       id: "id",
@@ -121,6 +103,28 @@ const MediaConvertIngestion = () => {
       ),
     },
   ];
+  const { items, collectionProps, filterProps, paginationProps } =
+    useCollection(isLoading ? [] : jobs, {
+      filtering: {
+        empty: (
+          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+            <b>No jobs</b>
+          </Box>
+        ),
+        noMatch: (
+          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+            <b>No matches</b>
+          </Box>
+        ),
+      },
+      pagination: { pageSize: preferences.pageSize },
+      sorting: {
+        defaultState: {
+          sortingColumn: columnDefinitions.find((col) => col.id === "id"),
+        },
+      },
+      selection: {},
+    });
 
   const handleClick = ({ item }) => {
     setSelectedItem(item);

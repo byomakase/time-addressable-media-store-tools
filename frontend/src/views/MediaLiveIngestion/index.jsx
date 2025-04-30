@@ -33,24 +33,6 @@ const MediaLiveIngestion = () => {
       { id: "button", visible: true },
     ],
   };
-  const { items, collectionProps, filterProps, paginationProps } =
-    useCollection(isLoading ? [] : channels, {
-      filtering: {
-        empty: (
-          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No channels</b>
-          </Box>
-        ),
-        noMatch: (
-          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No matches</b>
-          </Box>
-        ),
-      },
-      pagination: { pageSize: preferences.pageSize },
-      sorting: {},
-      selection: {},
-    });
   const columnDefinitions = [
     {
       id: "id",
@@ -130,6 +112,28 @@ const MediaLiveIngestion = () => {
       ),
     },
   ];
+  const { items, collectionProps, filterProps, paginationProps } =
+    useCollection(isLoading ? [] : channels, {
+      filtering: {
+        empty: (
+          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+            <b>No channels</b>
+          </Box>
+        ),
+        noMatch: (
+          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+            <b>No matches</b>
+          </Box>
+        ),
+      },
+      pagination: { pageSize: preferences.pageSize },
+      sorting: {
+        defaultState: {
+          sortingColumn: columnDefinitions.find((col) => col.id === "name"),
+        },
+      },
+      selection: {},
+    });
 
   const handleClick = ({ detail, item }) => {
     setSelectedItem(item);

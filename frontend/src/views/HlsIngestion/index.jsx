@@ -29,24 +29,6 @@ const HlsIngestion = () => {
       { id: "stopDate", visible: true },
     ],
   };
-  const { items, collectionProps, filterProps, paginationProps } =
-    useCollection(isLoading ? [] : workflows, {
-      filtering: {
-        empty: (
-          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No ingests</b>
-          </Box>
-        ),
-        noMatch: (
-          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No matches</b>
-          </Box>
-        ),
-      },
-      pagination: { pageSize: preferences.pageSize },
-      sorting: {},
-      selection: {},
-    });
   const columnDefinitions = [
     {
       id: "elementalService",
@@ -91,6 +73,31 @@ const HlsIngestion = () => {
       sortingField: "stopDate",
     },
   ];
+  const { items, collectionProps, filterProps, paginationProps } =
+    useCollection(isLoading ? [] : workflows, {
+      filtering: {
+        empty: (
+          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+            <b>No ingests</b>
+          </Box>
+        ),
+        noMatch: (
+          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+            <b>No matches</b>
+          </Box>
+        ),
+      },
+      pagination: { pageSize: preferences.pageSize },
+      sorting: {
+        defaultState: {
+          sortingColumn: columnDefinitions.find(
+            (col) => col.id === "startDate"
+          ),
+          isDescending: true,
+        },
+      },
+      selection: {},
+    });
 
   return (
     <>

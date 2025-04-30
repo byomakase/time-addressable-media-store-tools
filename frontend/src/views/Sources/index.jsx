@@ -139,7 +139,12 @@ const Sources = () => {
         ),
       },
       pagination: { pageSize: preferences.pageSize },
-      sorting: {},
+      sorting: {
+        defaultState: {
+          sortingColumn: columnDefinitions.find((col) => col.id === "created"),
+          isDescending: true
+        },
+      },
       selection: {},
     });
 

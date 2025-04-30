@@ -117,7 +117,12 @@ const FfmpegJobs = () => {
         ),
       },
       pagination: { pageSize: preferences.pageSize },
-      sorting: {},
+      sorting: {
+        defaultState: {
+          sortingColumn: columnDefinitions.find((col) => col.id === "startDate"),
+          isDescending: true
+        },
+      },
       selection: {},
     });
 

@@ -77,7 +77,11 @@ const FfmpegRules = () => {
         ),
       },
       pagination: { pageSize: PAGE_SIZE },
-      sorting: {},
+      sorting: {
+        defaultState: {
+          sortingColumn: columnDefinitions.find((col) => col.id === "id"),
+        },
+      },
       selection: {},
     });
 
