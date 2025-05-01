@@ -32,7 +32,6 @@ export const useFlow = (flowId) => {
   } = useSWR(
     ["/flows", flowId],
     ([path, flowId]) => get(`${path}/${flowId}?include_timerange=true`),
-    get,
     {
       refreshInterval: 3000,
     }
