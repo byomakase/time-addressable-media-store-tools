@@ -10,7 +10,8 @@ const paginationFetcher = async (path) => {
     response = await get(nextPath);
     records = records.concat(response.data);
   }
-  return records;
+  // Remove segments_updated field from record if present. This is required to avoid excessive re-renders for the flows view.
+  return records.map(({segments_updated, ...remainder}) => remainder);
 };
 
 export default paginationFetcher;

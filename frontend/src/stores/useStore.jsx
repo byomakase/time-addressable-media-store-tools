@@ -44,7 +44,6 @@ const useStore = create(
           { id: "metadata_version", visible: false },
           { id: "generation", visible: false },
           { id: "metadata_updated", visible: false },
-          { id: "segments_updated", visible: false },
           { id: "read_only", visible: false },
           { id: "codec", visible: false },
           { id: "container", visible: false },

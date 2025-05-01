@@ -122,12 +122,6 @@ const columnDefinitions = [
     sortingField: "metadata_updated",
   },
   {
-    id: "segments_updated",
-    header: "Segments updated",
-    cell: (item) => item.segments_updated,
-    sortingField: "segments_updated",
-  },
-  {
     id: "read_only",
     header: "Read only",
     cell: (item) => item.read_only,
