@@ -41,7 +41,7 @@ const columnDefinitions = [
     ),
     sortingField: "id",
     isRowHeader: true,
-    width: 310,
+    width: 360,
   },
   {
     id: "label",
