@@ -112,7 +112,16 @@ def process_segment(
         if segment.uri.startswith("http")
         else f"{manifest_path}/{segment.uri}"
     )
-    timerange = extract_segment_timerange(last_timestamp, segment_uri)
+    segment_start = last_timestamp
+    segment_end = Timestamp.from_nanosec(
+        segment_start.to_nanosec() + (segment.duration * 1000000000)
+    )
+    timerange = TimeRange(segment_start, segment_end, TimeRange.INCLUDE_START)
+    try:
+        ffprobe_timerange = extract_segment_timerange(last_timestamp, segment_uri)
+        timerange = ffprobe_timerange
+    except KeyError as ex:
+        logger.warning(ex)
     segment_dict = {
         "flowId": flow_id,
         "timerange": str(timerange),
