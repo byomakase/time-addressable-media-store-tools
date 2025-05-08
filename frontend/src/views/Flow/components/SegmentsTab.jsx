@@ -1,11 +1,83 @@
-import { Box, SpaceBetween, Table } from "@cloudscape-design/components";
+import {
+  Box,
+  CollectionPreferences,
+  SpaceBetween,
+  Table,
+} from "@cloudscape-design/components";
+import useStore from "@/stores/useStore";
 
 import { SEGMENT_COUNT } from "@/constants";
 import parseTimerange from "@/utils/parseTimerange";
 import { useLastN } from "@/hooks/useSegments";
 
 const SegmentsTab = ({ flowId }) => {
+  const preferences = useStore((state) => state.segmentsPreferences);
+  const setPreferences = useStore((state) => state.setSegmentsPreferences);
   const { segments, isLoading: loadingSegments } = useLastN(flowId, SEGMENT_COUNT);
+
+  const columnDefinitions = [
+    {
+      id: "id",
+      header: "Object Id",
+      cell: (item) => item.object_id,
+      isRowHeader: true,
+    },
+    {
+      id: "timerange",
+      header: "Timerange",
+      cell: (item) => item.timerange,
+    },
+    {
+      id: "ts_offset",
+      header: "TS Offset",
+      cell: (item) => item.ts_offset,
+    },
+    {
+      id: "last_duration",
+      header: "Last Duration",
+      cell: (item) => item.last_duration,
+    },
+    {
+      id: "sample_offset",
+      header: "Sample Offset",
+      cell: (item) => item.sample_offset,
+    },
+    {
+      id: "sample_count",
+      header: "Sample Count",
+      cell: (item) => item.sample_count,
+    },
+    {
+      id: "key_frame_count",
+      header: "Key Frame Count",
+      cell: (item) => item.key_frame_count,
+    },
+    {
+      id: "timerange_start",
+      header: "Timerange Start",
+      cell: (item) => item.localeTimerange.start,
+    },
+    {
+      id: "timerange_end",
+      header: "Timerange End",
+      cell: (item) => item.localeTimerange.end,
+    },
+  ];
+  const collectionPreferencesProps = {
+    contentDisplayPreference: {
+      title: "Column preferences",
+      description: "Customize the columns visibility and order.",
+      options: columnDefinitions.map(({ id, header }) => ({
+        id,
+        label: header,
+        alwaysVisible: id === "id",
+      })),
+    },
+    cancelLabel: "Cancel",
+    confirmLabel: "Confirm",
+    title: "Preferences",
+  };
+
 
   return (
     <SpaceBetween size="xs">
@@ -13,29 +85,8 @@ const SegmentsTab = ({ flowId }) => {
       <Table
         trackBy="object_id"
         variant="borderless"
-        columnDefinitions={[
-          {
-            id: "id",
-            header: "Id",
-            cell: (item) => item.object_id,
-            isRowHeader: true,
-          },
-          {
-            id: "timerange",
-            header: "Timerange",
-            cell: (item) => item.timerange,
-          },
-          {
-            id: "timerange_start",
-            header: "Timerange Start",
-            cell: (item) => item.localeTimerange.start,
-          },
-          {
-            id: "timerange_end",
-            header: "Timerange End",
-            cell: (item) => item.localeTimerange.end,
-          },
-        ]}
+        columnDefinitions={columnDefinitions}
+        columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
         items={
           segments &&
@@ -51,6 +102,13 @@ const SegmentsTab = ({ flowId }) => {
           <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
             <b>No segments</b>
           </Box>
+        }
+        preferences={
+          <CollectionPreferences
+            {...collectionPreferencesProps}
+            preferences={preferences}
+            onConfirm={({ detail }) => setPreferences(detail)}
+          />
         }
       />
     </SpaceBetween>

@@ -73,6 +73,22 @@ const useStore = create(
       setSourcesPreferences: (preferences) =>
         set({ sourcesPreferences: preferences }),
 
+      segmentsPreferences: {
+        contentDisplay: [
+          { id: "id", visible: true },
+          { id: "timerange", visible: true },
+          { id: "ts_offset", visible: false },
+          { id: "last_duration", visible: false },
+          { id: "sample_offset", visible: false },
+          { id: "sample_count", visible: false },
+          { id: "key_frame_count", visible: false },
+          { id: "timerange_start", visible: true },
+          { id: "timerange_end", visible: true },
+        ],
+      },
+      setSegmentsPreferences: (preferences) =>
+        set({ segmentsPreferences: preferences }),
+
       ffmpegExportsPreferences: {
         pageSize: PAGE_SIZE,
         contentDisplay: [
