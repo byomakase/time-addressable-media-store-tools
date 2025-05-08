@@ -22,7 +22,7 @@ const FfmpegRules = () => {
   const columnDefinitions = [
     {
       id: "id",
-      header: "Id",
+      header: "Origin Flow",
       cell: (item) => <Link to={`/flows/${item.id}`}>{item.id}</Link>,
       sortingField: "id",
       isRowHeader: true,
