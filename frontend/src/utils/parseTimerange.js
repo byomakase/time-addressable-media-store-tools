@@ -1,22 +1,49 @@
-import { DATE_FORMAT } from "@/constants";
 import { DateTime } from "luxon";
 
 const parseTimerange = (timerange) => {
-    const secondsValues = timerange
-        .substring(1)
-        .split("_")
-        .map((value) => parseInt(value.split(":")[0], 10));
-    if (secondsValues.length === 1) {
-        return {
-            start: DateTime.fromSeconds(secondsValues[0]).toLocaleString(DATE_FORMAT),
-            end: null,
-        };
-    } else if (secondsValues.length === 2) {
-        return {
-            start: DateTime.fromSeconds(secondsValues[0]).toLocaleString(DATE_FORMAT),
-            end: DateTime.fromSeconds(secondsValues[1]).toLocaleString(DATE_FORMAT),
-        };
-    };
+  const regexMatch = timerange.match(
+    /^(?<startInclusive>\[|\()?(?:-?(?<startSeconds>\d+):(?<startNanoseconds>\d+))?(?:_(?:-?(?<endSeconds>\d+):(?<endNanoseconds>\d+))?)?(?<endInclusive>\]|\))?$/
+  );
+  const {
+    startInclusive,
+    startSeconds,
+    startNanoseconds,
+    endSeconds,
+    endNanoseconds,
+    endInclusive,
+  } = regexMatch.groups;
+  const includesStart = startInclusive
+    ? startInclusive === "["
+      ? true
+      : startInclusive === "("
+      ? false
+      : undefined
+    : true;
+  const includesEnd = endInclusive
+    ? endInclusive === "]"
+      ? true
+      : endInclusive === ")"
+      ? false
+      : undefined
+    : true;
+  const start =
+    startSeconds && startNanoseconds
+      ? DateTime.fromSeconds(
+          parseInt(startSeconds, 10) + parseInt(startNanoseconds, 10) / 10 ** 9
+        )
+      : undefined;
+  const end =
+    endSeconds && endNanoseconds
+      ? DateTime.fromSeconds(
+          parseInt(endSeconds, 10) + parseInt(endNanoseconds, 10) / 10 ** 9
+        )
+      : undefined;
+  return {
+    start,
+    end,
+    includesStart,
+    includesEnd,
+  };
 };
 
 export default parseTimerange;

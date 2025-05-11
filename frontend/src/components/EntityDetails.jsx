@@ -6,6 +6,7 @@ import {
 
 import { Link } from "react-router-dom";
 import ValueWithLabel from "@/components/ValueWithLabel";
+import { DATE_FORMAT } from "@/constants";
 import chunkArray from "@/utils/chunkArray";
 import parseTimerange from "@/utils/parseTimerange";
 
@@ -35,7 +36,7 @@ const EntityDetails = ({ entity }) => {
     keyValues.push(["timerange", entity.timerange]);
     if (entity.timerange !== "()") {
       const { start, end } = parseTimerange(entity.timerange);
-      keyValues.push(["timerange_start", start], ["timerange_end", end]);
+      keyValues.push(["timerange_start", start?.toLocaleString(DATE_FORMAT)], ["timerange_end", end?.toLocaleString(DATE_FORMAT)]);
     }
   }
   const keyValueColumns = chunkArray(keyValues, 2);

@@ -6,7 +6,7 @@ import {
 } from "@cloudscape-design/components";
 import useStore from "@/stores/useStore";
 
-import { SEGMENT_COUNT } from "@/constants";
+import { SEGMENT_COUNT, DATE_FORMAT } from "@/constants";
 import parseTimerange from "@/utils/parseTimerange";
 import { useLastN } from "@/hooks/useSegments";
 
@@ -55,12 +55,12 @@ const SegmentsTab = ({ flowId }) => {
     {
       id: "timerange_start",
       header: "Timerange Start",
-      cell: (item) => item.localeTimerange.start,
+      cell: (item) => item.localeTimerange.start?.toLocaleString(DATE_FORMAT),
     },
     {
       id: "timerange_end",
       header: "Timerange End",
-      cell: (item) => item.localeTimerange.end,
+      cell: (item) => item.localeTimerange.end?.toLocaleString(DATE_FORMAT),
     },
   ];
   const collectionPreferencesProps = {
