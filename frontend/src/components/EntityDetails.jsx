@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import ValueWithLabel from "@/components/ValueWithLabel";
 import { DATE_FORMAT } from "@/constants";
 import chunkArray from "@/utils/chunkArray";
-import parseTimerange from "@/utils/parseTimerange";
+import { parseTimerangeStr } from "@/utils/parseTimerange";
 
 const EntityDetails = ({ entity }) => {
   const filteredEntity = entity
@@ -35,7 +35,7 @@ const EntityDetails = ({ entity }) => {
   if (entity.timerange) {
     keyValues.push(["timerange", entity.timerange]);
     if (entity.timerange !== "()") {
-      const { start, end } = parseTimerange(entity.timerange);
+      const { start, end } = parseTimerangeStr(entity.timerange);
       keyValues.push(["timerange_start", start?.toLocaleString(DATE_FORMAT)], ["timerange_end", end?.toLocaleString(DATE_FORMAT)]);
     }
   }

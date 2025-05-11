@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 
-const parseTimerange = (timerange) => {
+export const parseTimerangeStr = (timerange) => {
   const regexMatch = timerange.match(
     /^(?<startInclusive>\[|\()?(?:-?(?<startSeconds>\d+):(?<startNanoseconds>\d+))?(?:_(?:-?(?<endSeconds>\d+):(?<endNanoseconds>\d+))?)?(?<endInclusive>\]|\))?$/
   );
@@ -45,5 +45,3 @@ const parseTimerange = (timerange) => {
     includesEnd,
   };
 };
-
-export default parseTimerange;

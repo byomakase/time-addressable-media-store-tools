@@ -7,7 +7,7 @@ import {
 import useStore from "@/stores/useStore";
 
 import { SEGMENT_COUNT, DATE_FORMAT } from "@/constants";
-import parseTimerange from "@/utils/parseTimerange";
+import { parseTimerangeStr } from "@/utils/parseTimerange";
 import { useLastN } from "@/hooks/useSegments";
 
 const SegmentsTab = ({ flowId }) => {
@@ -92,7 +92,7 @@ const SegmentsTab = ({ flowId }) => {
           segments &&
           segments.map((segment) => ({
             ...segment,
-            localeTimerange: parseTimerange(segment.timerange),
+            localeTimerange: parseTimerangeStr(segment.timerange),
           }))
         }
         sortingDisabled
