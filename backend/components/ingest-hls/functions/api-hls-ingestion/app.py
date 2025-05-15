@@ -35,6 +35,8 @@ def find_key_with_s3_value(obj, key):
 
 @tracer.capture_method(capture_response=False)
 def manifest_exists(uri):
+    if not uri:
+        return False
     try:
         uri_parse = urlparse(uri)
         s3.head_object(
@@ -81,8 +83,8 @@ def get_channel_ingestions():
     channels = []
     for page in paginator.paginate():
         for channel in page["Channels"]:
-            destination_location = next(find_key_with_s3_value(channel, "Url"))
-            manifest_uri = f"{destination_location}.m3u8"
+            destination_location = next(find_key_with_s3_value(channel, "Url"), None)
+            manifest_uri = f"{destination_location}.m3u8" if destination_location else None
             channels.append(
                 {
                     "id": channel["Id"],

@@ -65,7 +65,7 @@ const MediaLiveIngestion = () => {
           triggerType="text"
           content={item.manifestUri}
         >
-          <TextContent>{item.manifestUri.replace(/^.*[\\/]/, "")}</TextContent>
+          <TextContent>{item.manifestUri?.replace(/^.*[\\/]/, "")}</TextContent>
         </Popover>
       ),
       sortingField: "manifest",
@@ -90,20 +90,21 @@ const MediaLiveIngestion = () => {
               type: "icon-button",
               id: "ingest",
               iconName: "add-plus",
+              disabled: !item.manifestUri,
               text: "Ingest HLS",
             },
             {
               type: "icon-button",
               id: "start",
               iconName: "play",
-              disabled: item.state !== "IDLE",
+              disabled: !item.manifestUri || item.state !== "IDLE",
               text: "Start Channel",
             },
             {
               type: "icon-button",
               id: "stop",
               iconName: "pause",
-              disabled: item.state !== "RUNNING",
+              disabled: !item.manifestUri || item.state !== "RUNNING",
               text: "Stop Channel",
             },
           ]}
