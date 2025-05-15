@@ -99,8 +99,6 @@ function resolveVideoInfo(
   flowSegments: Map<string, FlowSegment[]>,
   requestedTimeRange: string
 ): VideoInfo {
-  console.log({ flows, flowSegments });
-
   const sortedStartTimeAndFramerate = flows
     .filter((flow) => flowSegments.get(flow.id)!.length > 0)
     .map((flow) => {
@@ -243,7 +241,6 @@ function buildTimeline(
     description: "Segmenetation",
     style: TIMELINE_LANE_STYLE,
   });
-
   const parsedTimeRange = TimeRangeUtil.parseTimeRange(timerange);
   const start =
     TimeRangeUtil.timeMomentToSeconds(parsedTimeRange.start!) - markerOffset;
@@ -456,7 +453,6 @@ const OmakasePlayerTamsComponent = React.memo(
       }
       return flows;
     }, [childFlows, flowSegments, flow]);
-    console.log({ timelineBuilderFlows });
     const timelineBuilderFlowSegments = useMemo(() => {
       const segments = new Map([...childFlowsSegments]);
       if (flowSegments && flowSegments.length > 0) {
@@ -464,7 +460,6 @@ const OmakasePlayerTamsComponent = React.memo(
       }
       return segments;
     }, [childFlowsSegments, flowSegments, flow]);
-
     const videoInfo = resolveVideoInfo(
       timelineBuilderFlows,
       timelineBuilderFlowSegments,
