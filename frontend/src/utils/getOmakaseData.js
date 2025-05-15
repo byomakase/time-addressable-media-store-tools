@@ -84,15 +84,20 @@ const getMaxTimerange = ({ flow, relatedFlows }) => {
 const getOmakaseData = async ({ type, id, timerange }) => {
   const { flow, relatedFlows } = await getFlowAndQueue({ type, id });
   const maxTimerange = getMaxTimerange({ flow, relatedFlows });
+  const maxTimerangeDuration =
+    maxTimerange.end.toSeconds() - maxTimerange.start.toSeconds();
   const segmentsTimerange =
     timerange ??
     parseTimerangeObj({
       includesStart: true,
-      start: DateTime.fromSeconds(maxTimerange.end.toSeconds() - 300),
+      start:
+        maxTimerangeDuration > 30
+          ? DateTime.fromSeconds(maxTimerange.end.toSeconds() - 30)
+          : maxTimerange.start,
       end: maxTimerange.end,
       includesEnd: false,
     });
-  const flowSegments = [
+  const flowSegments = Object.fromEntries([
     [
       flow.id,
       await paginationFetcher(
@@ -107,7 +112,7 @@ const getOmakaseData = async ({ type, id, timerange }) => {
         ),
       ])
     )),
-  ];
+  ]);
 
   return {
     flow,
