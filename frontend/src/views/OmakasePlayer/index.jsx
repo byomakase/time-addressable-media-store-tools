@@ -19,7 +19,7 @@ export const OmakaseHlsPlayer = () => {
     isLoading,
   } = useOmakaseData(type, id, timerange);
 
-  if (!flow) {
+  if (!isLoading && !flow) {
     return <div>{`No valid ${type} found`}</div>;
   }
 
