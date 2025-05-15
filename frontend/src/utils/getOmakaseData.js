@@ -4,6 +4,8 @@ import { DateTime } from "luxon";
 import paginationFetcher from "@/utils/paginationFetcher";
 import { useApi } from "@/hooks/useApi";
 
+const DEFAULT_SEGMENTATION_DURATION = 300;
+
 const shouldExcludeFlow = (flow) =>
   flow.tags?.hls_exclude?.toLowerCase() === "true";
 
@@ -104,8 +106,8 @@ const getOmakaseData = async ({ type, id, timerange }) => {
     parseTimerangeObj({
       includesStart: true,
       start:
-        maxTimerangeDuration > 30
-          ? DateTime.fromSeconds(maxTimerange.end.toSeconds() - 30)
+        maxTimerangeDuration > DEFAULT_SEGMENTATION_DURATION
+          ? DateTime.fromSeconds(maxTimerange.end.toSeconds() - DEFAULT_SEGMENTATION_DURATION)
           : maxTimerange.start,
       end: maxTimerange.end,
       includesEnd: false,
