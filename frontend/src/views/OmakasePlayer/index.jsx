@@ -2,25 +2,27 @@ import "@byomakase/omakase-react-components/dist/omakase-react-components.css";
 
 import { OmakasePlayerTamsComponent } from ".";
 import { Spinner } from "@cloudscape-design/components";
-import { useOmakaseData } from "../../hooks/useFlows";
+import { useOmakaseData } from "../../hooks/useOmakaseData";
 import { useParams } from "react-router-dom";
+import { useState } from "react";
 
 export const OmakaseHlsPlayer = () => {
   const { type, id } = useParams();
+  const [timerange, setTimerange] = useState();
+
   const {
     flow,
     relatedFlows: filteredChildFlows,
     flowSegments,
-    timerange,
-    setTimerange,
+    timerange: calculatedTimerange,
     maxTimerange,
     isLoading,
-    error,
-  } = useOmakaseData(type, id);
+  } = useOmakaseData(type, id, timerange);
 
-  if (error) {
-    return <div>{error.message}</div>;
+  if (!flow) {
+    return <div>{`No valid ${type} found`}</div>;
   }
+
   return !isLoading ? (
     <OmakasePlayerTamsComponent
       flow={flow}
@@ -33,7 +35,7 @@ export const OmakaseHlsPlayer = () => {
           )
         )
       } // TODO: intended to be removed once implemented in OmakasePlayerTamsComponent
-      timeRange={timerange}
+      timeRange={calculatedTimerange}
       maxTimeRange={maxTimerange}
       setTimeRange={setTimerange}
       displayConfig={{}}
