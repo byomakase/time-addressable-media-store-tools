@@ -182,11 +182,14 @@ def get_manifest_segment_probe(source: str) -> dict:
     manifest = get_manifest(source)
     probe_result = None
     if manifest.segments:
-        segment_uri = (
-            manifest.segments[0].uri
-            if manifest.segments[0].uri.startswith("http")
-            else f"{manifest_path}/{manifest.segments[0].uri}"
-        )
+        segment_uri = f"{manifest_path}/{manifest.segments[0].uri}"
+        if manifest.segments[0].uri.startswith("http"):
+            segment_uri = manifest.segments[0].uri
+        elif manifest.segments[0].uri.startswith("/"):
+            path_parse = urlparse(manifest_path)
+            segment_uri = (
+                f"{path_parse.scheme}://{path_parse.netloc}{manifest.segments[0].uri}"
+            )
         probe_result = ffprobe_link(segment_uri)
     return probe_result or {}
 
@@ -201,11 +204,14 @@ def process_playlists(
     audio_codecs = {}
     for playlist in manifest.playlists:
         flow_id = str(uuid.uuid4())
-        flow_manifests[flow_id] = (
-            playlist.uri
-            if playlist.uri.startswith("http")
-            else f"{manifest_path}/{playlist.uri}"
-        )
+        flow_manifests[flow_id] = f"{manifest_path}/{playlist.uri}"
+        if playlist.uri.startswith("http"):
+            flow_manifests[flow_id] = playlist.uri
+        elif playlist.uri.startswith("/"):
+            path_parse = urlparse(manifest_path)
+            flow_manifests[flow_id] = (
+                f"{path_parse.scheme}://{path_parse.netloc}{playlist.uri}"
+            )
         probe = get_manifest_segment_probe(flow_manifests[flow_id])
         audio_group_id = next(
             (media.group_id for media in playlist.media if media.type == "AUDIO"),
@@ -219,7 +225,7 @@ def process_playlists(
         flow = {
             "id": flow_id,
             "label": label,
-            "description": f"HLS Import ({os.path.basename(playlist.uri)})",
+            "description": f'HLS Import ({os.path.basename(playlist.uri.split("?")[0])})',
             "codec": tams_codecs[0][0],
             "container": map_container(probe),
             "avg_bit_rate": playlist.stream_info.average_bandwidth,
@@ -270,11 +276,14 @@ def process_media(
     flow_manifests = {}
     for media in manifest.media:
         flow_id = str(uuid.uuid4())
-        flow_manifests[flow_id] = (
-            media.uri
-            if media.uri.startswith("http")
-            else f"{manifest_path}/{media.uri}"
-        )
+        flow_manifests[flow_id] = f"{manifest_path}/{media.uri}"
+        if media.uri.startswith("http"):
+            flow_manifests[flow_id] = media.uri
+        elif media.uri.startswith("/"):
+            path_parse = urlparse(manifest_path)
+            flow_manifests[flow_id] = (
+                f"{path_parse.scheme}://{path_parse.netloc}{media.uri}"
+            )
         probe = get_manifest_segment_probe(flow_manifests[flow_id])
         tags = {}
         for attr in ["language", "name", "autoselect", "default", "forced"]:
@@ -294,7 +303,7 @@ def process_media(
                 flow = {
                     "id": flow_id,
                     "label": label,
-                    "description": f"HLS Import ({os.path.basename(media.uri)})",
+                    "description": f"HLS Import ({os.path.basename(media.uri.split("?")[0])})",
                     "codec": codec[0],
                     "container": map_container(probe),
                     "format": "urn:x-nmos:format:audio",
@@ -322,7 +331,7 @@ def process_media(
                 flow = {
                     "id": flow_id,
                     "label": label,
-                    "description": f"HLS Import ({os.path.basename(media.uri)})",
+                    "description": f"HLS Import ({os.path.basename(media.uri.split("?")[0])})",
                     "codec": codec[0],
                     "container": map_container(probe),
                     "format": "urn:x-nmos:format:data",
@@ -392,7 +401,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
     ]
     # Set Source Ids and add multi if required
     multi_flows = set_source_and_multi(
-        label, f"HLS Import ({os.path.basename(manifest_location)})", flows
+        label, f'HLS Import ({os.path.basename(manifest_location).split("?")[0]})', flows
     )
     return {
         "flows": flows,
