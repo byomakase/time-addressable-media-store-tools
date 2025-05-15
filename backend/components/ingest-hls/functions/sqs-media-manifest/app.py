@@ -107,11 +107,14 @@ def process_segment(
     manifest_path: str,
     segments: list,
 ) -> Timestamp:
-    segment_uri = (
-        segment.uri
-        if segment.uri.startswith("http")
-        else f"{manifest_path}/{segment.uri}"
-    )
+    segment_uri = f"{manifest_path}/{segment.uri}"
+    if segment.uri.startswith("http"):
+        segment_uri = segment.uri
+    elif segment.uri.startswith("/"):
+        path_parse = urlparse(manifest_path)
+        segment_uri = (
+            f"{path_parse.scheme}://{path_parse.netloc}{segment.uri}"
+        )
     segment_start = last_timestamp
     segment_end = Timestamp.from_nanosec(
         segment_start.to_nanosec() + (segment.duration * 1000000000)
