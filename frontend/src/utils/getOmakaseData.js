@@ -4,64 +4,75 @@ import { DateTime } from "luxon";
 import paginationFetcher from "@/utils/paginationFetcher";
 import { useApi } from "@/hooks/useApi";
 
+const shouldExcludeFlow = (flow) =>
+  flow.tags?.hls_exclude === "true" ||
+  flow.tags?.hls_exclude === true ||
+  flow.tags?.hls_exclude === "1" ||
+  flow.tags?.hls_exclude === 1;
+
 const getFlowAndQueue = async ({ type, id }) => {
   const { get } = useApi();
   let flow = {};
   const relatedFlowQueue = [];
+
   if (type === "flows") {
-    const getFlow = (await get(`/flows/${id}?include_timerange=true`)).data;
-    if (getFlow.tags?.hls_exclude?.toLowerCase() === "true") {
+    const flowData = (await get(`/flows/${id}?include_timerange=true`)).data;
+    if (shouldExcludeFlow(flowData)) {
       console.error("No valid Flows found.");
-      return { flow: null, relatedFlowQueue: [] };
+      return { flow: null, relatedFlows: [] };
     }
-    flow = getFlow;
-    if (flow.flow_collection) {
-      relatedFlowQueue.push(...flow.flow_collection.map(({ id }) => id));
-    }
+    flow = flowData;
   } else {
     const sourceFlows = (await get(`/flows/?source_id=${id}`)).data;
     const filteredSourceFlows = sourceFlows.filter(
-      (sourceFlow) =>
-        !sourceFlow.tags ||
-        sourceFlow.tags?.hls_exclude?.toLowerCase() !== "true"
+      (sourceFlow) => !shouldExcludeFlow(sourceFlow)
     );
-    if (filteredSourceFlows.length == 0) {
+
+    if (filteredSourceFlows.length === 0) {
       console.error("No valid Flows found.");
-      return { flow: null, relatedFlowQueue: [] };
+      return { flow: null, relatedFlows: [] };
     }
+
     flow = (
       await get(`/flows/${filteredSourceFlows[0].id}?include_timerange=true`)
     ).data;
     relatedFlowQueue.push(...filteredSourceFlows.slice(1).map(({ id }) => id));
-    if (flow.flow_collection) {
-      relatedFlowQueue.push(...flow.flow_collection.map(({ id }) => id));
-    }
   }
-  const relatedFlows = await getFlowHierachy(relatedFlowQueue);
+
+  if (flow.flow_collection) {
+    relatedFlowQueue.push(...flow.flow_collection.map(({ id }) => id));
+  }
+
+  const relatedFlows = await getFlowHierarchy(relatedFlowQueue);
   return { flow, relatedFlows };
 };
 
-const getFlowHierachy = async (relatedFlowQueue) => {
+const getFlowHierarchy = async (relatedFlowQueue) => {
   const { get } = useApi();
-  let relatedFlows = [];
-  let checkedFlowIds = [];
+  const relatedFlows = [];
+  const checkedFlowIds = new Set();
+
   while (relatedFlowQueue.length > 0) {
     const relatedFlowId = relatedFlowQueue.pop();
-    checkedFlowIds.push(relatedFlowId);
-    const getFlow = (
+    checkedFlowIds.add(relatedFlowId);
+
+    const flowData = (
       await get(`/flows/${relatedFlowId}?include_timerange=true`)
     ).data;
-    if (!getFlow.tags || getFlow.tags?.hls_exclude?.toLowerCase() !== "true") {
-      relatedFlows.push(getFlow);
+
+    if (!shouldExcludeFlow(flowData)) {
+      relatedFlows.push(flowData);
     }
-    if (getFlow.flow_collection) {
-      relatedFlowQueue.push(
-        ...getFlow.flow_collection
-          .filter((collectedFlow) => !checkedFlowIds.includes(collectedFlow.id))
-          .map(({ id }) => id)
-      );
+
+    if (flowData.flow_collection) {
+      const newFlowIds = flowData.flow_collection
+        .filter(({ id }) => !checkedFlowIds.has(id))
+        .map(({ id }) => id);
+
+      relatedFlowQueue.push(...newFlowIds);
     }
   }
+
   return relatedFlows;
 };
 
@@ -70,20 +81,26 @@ const getMaxTimerange = ({ flow, relatedFlows }) => {
     parseTimerangeStr(flow.timerange),
     ...relatedFlows.map(({ timerange }) => parseTimerangeStr(timerange)),
   ];
+
+  const validStartTimes = allTimeranges
+    .filter(({ start }) => start)
+    .map(({ start }) => start);
+
+  const validEndTimes = allTimeranges
+    .filter(({ end }) => end)
+    .map(({ end }) => end);
+
   return {
-    // Minimum start of timerange for all flows
-    start: DateTime.min(
-      ...allTimeranges.filter(({ start }) => start).map(({ start }) => start)
-    ),
-    // Maxiumum end of timerange for all flows
-    end: DateTime.max(
-      ...allTimeranges.filter(({ end }) => end).map(({ end }) => end)
-    ),
+    start: validStartTimes.length ? DateTime.min(...validStartTimes) : null,
+    end: validEndTimes.length ? DateTime.max(...validEndTimes) : null,
   };
 };
 
 const getOmakaseData = async ({ type, id, timerange }) => {
   const { flow, relatedFlows } = await getFlowAndQueue({ type, id });
+  if (!flow || !relatedFlows) {
+    throw new Error(`Selected ${type} don’t contain video or audio`);
+  }
   const maxTimerange = getMaxTimerange({ flow, relatedFlows });
   const maxTimerangeDuration =
     maxTimerange.end.toSeconds() - maxTimerange.start.toSeconds();
@@ -98,28 +115,23 @@ const getOmakaseData = async ({ type, id, timerange }) => {
       end: maxTimerange.end,
       includesEnd: false,
     });
-  const flowSegments = Object.fromEntries([
-    [
-      flow.id,
-      await paginationFetcher(
-        `/flows/${flow.id}/segments?limit=300&timerange=${segmentsTimerange}`
-      ),
-    ],
-    ...(await Promise.all(
-      relatedFlows.map(async ({ id }) => [
-        id,
-        await paginationFetcher(
-          `/flows/${id}/segments?limit=300&timerange=${segmentsTimerange}`
-        ),
-      ])
-    )),
-  ]);
-
+  const parsedMaxTimeRange = parseTimerangeObj(maxTimerange);
+  const fetchPromises = [
+    paginationFetcher(
+      `/flows/${flow.id}/segments?limit=300&timerange=${segmentsTimerange}`
+    ).then((result) => [flow.id, result]),
+    ...relatedFlows.map(({ id }) =>
+      paginationFetcher(
+        `/flows/${id}/segments?limit=300&timerange=${segmentsTimerange}`
+      ).then((result) => [id, result])
+    ),
+  ];
+  const flowSegments = Object.fromEntries(await Promise.all(fetchPromises));
   return {
     flow,
     relatedFlows,
     flowSegments,
-    maxTimerange: parseTimerangeObj(maxTimerange),
+    maxTimerange: parsedMaxTimeRange,
     timerange: segmentsTimerange,
   };
 };
