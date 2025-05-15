@@ -49,12 +49,11 @@ export const parseTimerangeStr = (timerange) => {
 export const parseTimerangeObj = ({
   start,
   end,
-  includesStart,
-  includesEnd,
+  includesStart = true,
+  includesEnd = false,
 }) => {
-  const startInclusive =
-    includesStart === undefined ? "" : includesStart ? "[" : "(";
-  const endInclusive = includesEnd === undefined ? "" : includesEnd ? "]" : ")";
+  const startInclusive = includesStart ? "[" : "(";
+  const endInclusive = includesEnd ? "]" : ")";
   const startSeconds = start === undefined ? "" : Math.floor(start.toSeconds());
   const endSeconds = end === undefined ? "" : Math.floor(end.toSeconds());
   const startNanoseconds =
