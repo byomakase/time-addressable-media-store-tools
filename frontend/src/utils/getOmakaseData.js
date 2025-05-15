@@ -5,10 +5,7 @@ import paginationFetcher from "@/utils/paginationFetcher";
 import { useApi } from "@/hooks/useApi";
 
 const shouldExcludeFlow = (flow) =>
-  flow.tags?.hls_exclude === "true" ||
-  flow.tags?.hls_exclude === true ||
-  flow.tags?.hls_exclude === "1" ||
-  flow.tags?.hls_exclude === 1;
+  flow.tags?.hls_exclude?.toLowerCase() === "true";
 
 const getFlowAndQueue = async ({ type, id }) => {
   const { get } = useApi();
@@ -98,9 +95,7 @@ const getMaxTimerange = ({ flow, relatedFlows }) => {
 
 const getOmakaseData = async ({ type, id, timerange }) => {
   const { flow, relatedFlows } = await getFlowAndQueue({ type, id });
-  if (!flow || !relatedFlows) {
-    throw new Error(`Selected ${type} don’t contain video or audio`);
-  }
+
   const maxTimerange = getMaxTimerange({ flow, relatedFlows });
   const maxTimerangeDuration =
     maxTimerange.end.toSeconds() - maxTimerange.start.toSeconds();
