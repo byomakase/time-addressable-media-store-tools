@@ -5,7 +5,7 @@ import { TimeRangeUtil } from "./time-range-util";
 export class TAMSThumbnailUtil {
   public static resolveLowestQualityImageFlow(flows: Flow[]) {
     const imageFlows = flows.filter(
-      (flow) => flow.format === "urn:x-nmos:format:image"
+      (flow) => flow.format === "urn:x-tam:format:image"
     );
 
     if (imageFlows.length === 0) {
