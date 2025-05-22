@@ -8,7 +8,7 @@ const svgPaths = {
 
 export const formatPrecedence = [
     "urn:x-nmos:format:video",
-    "urn:x-nmos:format:image",
+    "urn:x-tam:format:image",
     "urn:x-nmos:format:audio",
     "urn:x-nmos:format:data",
 ]
