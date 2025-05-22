@@ -14,7 +14,7 @@
             "avg_bit_rate": null,
             "max_bit_rate": null,
             "segment_duration": null,
-            "format": "urn:x-nmos:format:image",
+            "format": "urn:x-tam:format:image",
             "essence_parameters": {
                 "frame_width": 320,
                 "frame_height": 180
