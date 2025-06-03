@@ -16,7 +16,8 @@ def apply_changes(flow: dict, changes: dict, source_id: str) -> dict:
             current = new_flow
             for i in range(len(path_parts) - 1):
                 current = current[path_parts[i]]
-            del current[path_parts[-1]]
+            if current.get(path_parts[-1]):
+                del current[path_parts[-1]]
         else:
             if "." in key:
                 path_parts = key.split(".")
