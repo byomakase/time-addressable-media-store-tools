@@ -50,7 +50,7 @@ const parseTimerangeComponents = (timerange) => {
  * @param {string} timerange - String in format "[seconds:nanoseconds_seconds:nanoseconds]"
  * @returns {Object} Object with start and end as BigInt nanosecond values and inclusion flags
  */
-export const parseTimerangeStrNano = (timerange) => {
+export const parseTimerangeStrBigInt = (timerange) => {
   const {
     startSeconds,
     startNanoseconds,
@@ -159,7 +159,7 @@ export const parseTimerangeObj = ({
  * @param {boolean} [options.includesEnd=false] - Whether the range includes the end time
  * @returns {string} Timerange string in format "[seconds:nanoseconds_seconds:nanoseconds]"
  */
-export const parseTimerangeObjNano = ({
+export const parseTimerangeObjBigInt = ({
   start,
   end,
   includesStart = true,
@@ -172,14 +172,14 @@ export const parseTimerangeObjNano = ({
   let startNanoseconds = "";
   if (start !== undefined) {
     startSeconds = (start / NANOS_PER_SECOND).toString();
-    startNanoseconds = (start % NANOS_PER_SECOND).toString().padStart(9, "0");
+    startNanoseconds = (start % NANOS_PER_SECOND).toString();
   }
 
   let endSeconds = "";
   let endNanoseconds = "";
   if (end !== undefined) {
     endSeconds = (end / NANOS_PER_SECOND).toString();
-    endNanoseconds = (end % NANOS_PER_SECOND).toString().padStart(9, "0");
+    endNanoseconds = (end % NANOS_PER_SECOND).toString();
   }
 
   const startTimerange =
