@@ -83,26 +83,29 @@ const getFlowHierarchy = async (relatedFlowQueue) => {
 
 const getMaxTimerange = (flows) => {
   if (!flows.length) return { start: null, end: null };
-  
+
   let minStart = flows[0].timerange.start;
   let maxEnd = flows[0].timerange.end;
-  
+
   for (let i = 1; i < flows.length; i++) {
     const { start, end } = flows[i].timerange;
     if (start < minStart) minStart = start;
     if (end > maxEnd) maxEnd = end;
   }
-  
+
   return { start: minStart, end: maxEnd };
 };
 
 const parseAndFilterFlows = (flows) => {
   const result = [];
-  const validFormats = new Set(["urn:x-nmos:format:video", "urn:x-nmos:format:audio"]);
-  
+  const validFormats = new Set([
+    "urn:x-nmos:format:video",
+    "urn:x-nmos:format:audio",
+  ]);
+
   for (const flow of flows) {
     if (!validFormats.has(flow.format)) continue;
-    
+
     try {
       const parsedTimerange = parseTimerangeStrNano(flow.timerange);
       if (parsedTimerange.start && parsedTimerange.end) {
@@ -112,23 +115,52 @@ const parseAndFilterFlows = (flows) => {
       // Skip flows with parsing errors
     }
   }
-  
+
   return result;
 };
 
-const getsegmentationTimerange = (maxTimerange) => {
+const getSegmentationTimerange = ({ flows, maxTimerange }) => {
   const maxTimerangeDuration = Number(
     (maxTimerange.end - maxTimerange.start) / NANOS_PER_SECOND
   );
+  // Early return if max timerange is less than default
+  if (maxTimerangeDuration <= DEFAULT_SEGMENTATION_DURATION) {
+    return maxTimerange;
+  }
+
+  // Filter for video flows
+  const videoFlows = flows.filter(
+    ({ format }) => format === "urn:x-nmos:format:video"
+  );
+
+  // Determine which flows to use for calculation
+  const flowsToUse = videoFlows.length > 0 ? videoFlows : flows;
+
+  // Parse timeranges for the selected flows
+  const timeranges = flowsToUse.map((flow) =>
+    parseTimerangeStrNano(flow.timerange)
+  );
+
+  if (timeranges.length === 0) {
+    return {
+      start: null,
+      end: null,
+    };
+  }
+
+  // Find the earliest end time among the selected flows
+  const earliestEnd = timeranges.reduce(
+    (earliest, current) => (current.end < earliest ? current.end : earliest),
+    timeranges[0].end
+  );
+
+  // Calculate the start time (300 seconds before end, or as much as available)
+  const start =
+    earliestEnd - BigInt(DEFAULT_SEGMENTATION_DURATION) * NANOS_PER_SECOND;
+
   return {
-    includesStart: true,
-    start:
-      maxTimerangeDuration > DEFAULT_SEGMENTATION_DURATION
-        ? maxTimerange.end -
-          BigInt(DEFAULT_SEGMENTATION_DURATION) * NANOS_PER_SECOND
-        : maxTimerange.start,
-    end: maxTimerange.end,
-    includesEnd: false,
+    start,
+    end: earliestEnd,
   };
 };
 
@@ -136,20 +168,24 @@ const getOmakaseData = async ({ type, id, timerange }) => {
   const { flow, relatedFlows } = await getFlowAndRelated({ type, id });
 
   const timerangeValidFlows = parseAndFilterFlows([flow, ...relatedFlows]);
+
   const maxTimerange = getMaxTimerange(timerangeValidFlows);
+  const segmentationTimerange = getSegmentationTimerange({
+    flows: timerangeValidFlows,
+    maxTimerange,
+  });
 
-  const segmentsTimerange =
-    timerange ?? parseTimerangeObjNano(getsegmentationTimerange(maxTimerange));
-
+  const parsedTimerange =
+    timerange ?? parseTimerangeObjNano(segmentationTimerange);
   const parsedMaxTimeRange = parseTimerangeObjNano(maxTimerange);
 
   const fetchPromises = [
     paginationFetcher(
-      `/flows/${flow.id}/segments?limit=300&timerange=${segmentsTimerange}`
+      `/flows/${flow.id}/segments?limit=300&timerange=${parsedTimerange}`
     ).then((result) => [flow.id, result]),
     ...relatedFlows.map(({ id }) =>
       paginationFetcher(
-        `/flows/${id}/segments?limit=300&timerange=${segmentsTimerange}`
+        `/flows/${id}/segments?limit=300&timerange=${parsedTimerange}`
       ).then((result) => [id, result])
     ),
   ];
@@ -161,7 +197,7 @@ const getOmakaseData = async ({ type, id, timerange }) => {
     relatedFlows,
     flowSegments,
     maxTimerange: parsedMaxTimeRange,
-    timerange: segmentsTimerange,
+    timerange: parsedTimerange,
   };
 };
 
