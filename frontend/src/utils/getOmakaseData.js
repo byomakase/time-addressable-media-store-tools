@@ -108,7 +108,10 @@ const parseAndFilterFlows = (flows) => {
 
     try {
       const parsedTimerange = parseTimerangeStrBigInt(flow.timerange);
-      if (parsedTimerange.start && parsedTimerange.end) {
+      if (
+        parsedTimerange.start !== undefined &&
+        parsedTimerange.end !== undefined
+      ) {
         result.push({ ...flow, timerange: parsedTimerange });
       }
     } catch (error) {
@@ -221,14 +224,6 @@ const getOmakaseData = async ({ type, id, timerange }) => {
     );
 
   const flowSegments = Object.fromEntries(await Promise.all(fetchPromises));
-
-  console.log({
-    flow,
-    relatedFlows,
-    flowSegments,
-    maxTimerange: parsedMaxTimerange,
-    timerange: parsedTimerange,
-  });
 
   return {
     flow,
