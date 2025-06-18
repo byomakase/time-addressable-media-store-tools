@@ -81,46 +81,65 @@ const getFlowHierarchy = async (relatedFlowQueue) => {
   return relatedFlows;
 };
 
-const getMaxTimerange = ({ flow, relatedFlows }) => {
-  const allTimeranges = [
-    parseTimerangeStrNano(flow.timerange),
-    ...relatedFlows.map(({ timerange }) => parseTimerangeStrNano(timerange)),
-  ];
+const getMaxTimerange = (flows) => {
+  if (!flows.length) return { start: null, end: null };
+  
+  let minStart = flows[0].timerange.start;
+  let maxEnd = flows[0].timerange.end;
+  
+  for (let i = 1; i < flows.length; i++) {
+    const { start, end } = flows[i].timerange;
+    if (start < minStart) minStart = start;
+    if (end > maxEnd) maxEnd = end;
+  }
+  
+  return { start: minStart, end: maxEnd };
+};
 
-  const validStartTimes = allTimeranges
-    .filter(({ start }) => start)
-    .map(({ start }) => start);
+const parseAndFilterFlows = (flows) => {
+  const result = [];
+  const validFormats = new Set(["urn:x-nmos:format:video", "urn:x-nmos:format:audio"]);
+  
+  for (const flow of flows) {
+    if (!validFormats.has(flow.format)) continue;
+    
+    try {
+      const parsedTimerange = parseTimerangeStrNano(flow.timerange);
+      if (parsedTimerange.start && parsedTimerange.end) {
+        result.push({ ...flow, timerange: parsedTimerange });
+      }
+    } catch (error) {
+      // Skip flows with parsing errors
+    }
+  }
+  
+  return result;
+};
 
-  const validEndTimes = allTimeranges
-    .filter(({ end }) => end)
-    .map(({ end }) => end);
-
+const getsegmentationTimerange = (maxTimerange) => {
+  const maxTimerangeDuration = Number(
+    (maxTimerange.end - maxTimerange.start) / NANOS_PER_SECOND
+  );
   return {
-    start: validStartTimes.length ? Math.min(...validStartTimes) : null,
-    end: validEndTimes.length ? Math.max(validEndTimes) : null,
+    includesStart: true,
+    start:
+      maxTimerangeDuration > DEFAULT_SEGMENTATION_DURATION
+        ? maxTimerange.end -
+          BigInt(DEFAULT_SEGMENTATION_DURATION) * NANOS_PER_SECOND
+        : maxTimerange.start,
+    end: maxTimerange.end,
+    includesEnd: false,
   };
 };
 
 const getOmakaseData = async ({ type, id, timerange }) => {
   const { flow, relatedFlows } = await getFlowAndRelated({ type, id });
 
-  const maxTimerange = getMaxTimerange({ flow, relatedFlows });
-  const maxTimerangeDuration = Number(
-    (maxTimerange.end - maxTimerange.start) / NANOS_PER_SECOND
-  );
+  const timerangeValidFlows = parseAndFilterFlows([flow, ...relatedFlows]);
+  const maxTimerange = getMaxTimerange(timerangeValidFlows);
 
   const segmentsTimerange =
-    timerange ??
-    parseTimerangeObjNano({
-      includesStart: true,
-      start:
-        maxTimerangeDuration > DEFAULT_SEGMENTATION_DURATION
-          ? maxTimerange.end -
-            BigInt(DEFAULT_SEGMENTATION_DURATION) * NANOS_PER_SECOND
-          : maxTimerange.start,
-      end: maxTimerange.end,
-      includesEnd: false,
-    });
+    timerange ?? parseTimerangeObjNano(getsegmentationTimerange(maxTimerange));
 
   const parsedMaxTimeRange = parseTimerangeObjNano(maxTimerange);
 
