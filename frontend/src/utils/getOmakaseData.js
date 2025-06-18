@@ -1,15 +1,18 @@
-import { parseTimerangeObj, parseTimerangeStr } from "@/utils/parseTimerange";
+import {
+  parseTimerangeObjNano,
+  parseTimerangeStrNano,
+} from "@/utils/parseTimerange";
 
-import { DateTime } from "luxon";
 import paginationFetcher from "@/utils/paginationFetcher";
 import { useApi } from "@/hooks/useApi";
 
 const DEFAULT_SEGMENTATION_DURATION = 300;
+const NANOS_PER_SECOND = 1_000_000_000n;
 
 const shouldExcludeFlow = (flow) =>
   flow.tags?.hls_exclude?.toLowerCase() === "true";
 
-const getFlowAndQueue = async ({ type, id }) => {
+const getFlowAndRelated = async ({ type, id }) => {
   const { get } = useApi();
   let flow = {};
   const relatedFlowQueue = [];
@@ -43,7 +46,10 @@ const getFlowAndQueue = async ({ type, id }) => {
   }
 
   const relatedFlows = await getFlowHierarchy(relatedFlowQueue);
-  return { flow, relatedFlows };
+  const sortedRelatedFlows = relatedFlows.sort(
+    (a, b) => a.avg_bit_rate - b.avg_bit_rate
+  );
+  return { flow, relatedFlows: sortedRelatedFlows };
 };
 
 const getFlowHierarchy = async (relatedFlowQueue) => {
@@ -77,8 +83,8 @@ const getFlowHierarchy = async (relatedFlowQueue) => {
 
 const getMaxTimerange = ({ flow, relatedFlows }) => {
   const allTimeranges = [
-    parseTimerangeStr(flow.timerange),
-    ...relatedFlows.map(({ timerange }) => parseTimerangeStr(timerange)),
+    parseTimerangeStrNano(flow.timerange),
+    ...relatedFlows.map(({ timerange }) => parseTimerangeStrNano(timerange)),
   ];
 
   const validStartTimes = allTimeranges
@@ -90,29 +96,34 @@ const getMaxTimerange = ({ flow, relatedFlows }) => {
     .map(({ end }) => end);
 
   return {
-    start: validStartTimes.length ? DateTime.min(...validStartTimes) : null,
-    end: validEndTimes.length ? DateTime.max(...validEndTimes) : null,
+    start: validStartTimes.length ? Math.min(...validStartTimes) : null,
+    end: validEndTimes.length ? Math.max(validEndTimes) : null,
   };
 };
 
 const getOmakaseData = async ({ type, id, timerange }) => {
-  const { flow, relatedFlows } = await getFlowAndQueue({ type, id });
+  const { flow, relatedFlows } = await getFlowAndRelated({ type, id });
 
   const maxTimerange = getMaxTimerange({ flow, relatedFlows });
-  const maxTimerangeDuration =
-    maxTimerange.end.toSeconds() - maxTimerange.start.toSeconds();
+  const maxTimerangeDuration = Number(
+    (maxTimerange.end - maxTimerange.start) / NANOS_PER_SECOND
+  );
+
   const segmentsTimerange =
     timerange ??
-    parseTimerangeObj({
+    parseTimerangeObjNano({
       includesStart: true,
       start:
         maxTimerangeDuration > DEFAULT_SEGMENTATION_DURATION
-          ? DateTime.fromSeconds(maxTimerange.end.toSeconds() - DEFAULT_SEGMENTATION_DURATION)
+          ? maxTimerange.end -
+            BigInt(DEFAULT_SEGMENTATION_DURATION) * NANOS_PER_SECOND
           : maxTimerange.start,
       end: maxTimerange.end,
       includesEnd: false,
     });
-  const parsedMaxTimeRange = parseTimerangeObj(maxTimerange);
+
+  const parsedMaxTimeRange = parseTimerangeObjNano(maxTimerange);
+
   const fetchPromises = [
     paginationFetcher(
       `/flows/${flow.id}/segments?limit=300&timerange=${segmentsTimerange}`
@@ -123,7 +134,9 @@ const getOmakaseData = async ({ type, id, timerange }) => {
       ).then((result) => [id, result])
     ),
   ];
+
   const flowSegments = Object.fromEntries(await Promise.all(fetchPromises));
+
   return {
     flow,
     relatedFlows,
