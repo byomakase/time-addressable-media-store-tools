@@ -53,8 +53,7 @@ import { TAMSThumbnailUtil } from "../../util/tams-thumbnail-util";
 type OmakasePlayerTamsComponentProps = {
   flow: Flow;
   childFlows: Flow[];
-  flowSegments: FlowSegment[];
-  childFlowsSegments: Map<string, FlowSegment[]>;
+  flowsSegments: Map<string, FlowSegment[]>;
   timeRange: string;
   maxTimeRange: string;
   displayConfig: Partial<DisplayConfig>;
@@ -195,6 +194,12 @@ function segmentToMarker(
         start = undefined;
       }
     }
+
+    if (end < 0) {
+      //if the end is negative as well it means this marker does not intersect video timeline
+      end = undefined;
+      start = undefined;
+    }
   }
 
   return new PeriodMarker({
@@ -256,15 +261,19 @@ function buildTimeline(
   const segmentationLaneId = "segmentation";
   timelineBuilder.addMarkerLane({
     id: segmentationLaneId,
-    description: "Segmenetation",
+    description: "Segmentation",
     style: TIMELINE_LANE_STYLE,
   });
 
   const parsedTimeRange = TimeRangeUtil.parseTimeRange(timerange);
-  const start =
-    TimeRangeUtil.timeMomentToSeconds(parsedTimeRange.start!) - markerOffset;
-  const end =
-    TimeRangeUtil.timeMomentToSeconds(parsedTimeRange.end!) - markerOffset;
+  const start = Math.max(
+    TimeRangeUtil.timeMomentToSeconds(parsedTimeRange.start!) - markerOffset,
+    0
+  );
+  const end = Math.min(
+    TimeRangeUtil.timeMomentToSeconds(parsedTimeRange.end!) - markerOffset,
+    omakasePlayer.video.getDuration()
+  );
 
   const segmentationMarker = new PeriodMarker({
     timeObservation: {
@@ -462,8 +471,7 @@ const OmakasePlayerTamsComponent = React.memo(
   ({
     flow,
     childFlows,
-    flowSegments,
-    childFlowsSegments,
+    flowsSegments,
     timeRange,
     maxTimeRange,
     setTimeRange,
@@ -473,23 +481,15 @@ const OmakasePlayerTamsComponent = React.memo(
 
     const timelineBuilderFlows = useMemo(() => {
       const flows = childFlows ? [...childFlows] : [];
-      if (flowSegments && flowSegments.length > 0) {
+      if (flowsSegments.get(flow.id)!.length > 0) {
         flows.unshift(flow);
       }
       return flows;
-    }, [childFlows, flowSegments, flow]);
-
-    const timelineBuilderFlowSegments = useMemo(() => {
-      const segments = new Map([...childFlowsSegments]);
-      if (flowSegments && flowSegments.length > 0) {
-        segments.set(flow.id, flowSegments);
-      }
-      return segments;
-    }, [childFlowsSegments, flowSegments, flow]);
+    }, [childFlows, flowsSegments, flow]);
 
     const videoInfo = resolveVideoInfo(
       timelineBuilderFlows,
-      timelineBuilderFlowSegments,
+      flowsSegments,
       timeRange
     );
 
@@ -638,7 +638,7 @@ const OmakasePlayerTamsComponent = React.memo(
                     omakasePlayer={omakasePlayer}
                     source={source}
                     flows={timelineBuilderFlows}
-                    flowSegments={timelineBuilderFlowSegments}
+                    flowSegments={flowsSegments}
                     markerOffset={videoInfo.markerOffset}
                   />
 
@@ -691,8 +691,7 @@ const OmakasePlayerTamsComponent = React.memo(
               <OmakaseTamsPlayerComponent
                 flow={flow}
                 childFlows={childFlows}
-                flowSegments={flowSegments}
-                childFlowsSegments={childFlowsSegments}
+                flowsSegments={flowsSegments}
                 videoLoadOptions={videoLoadOptions}
                 onVideoLoadedCallback={(omakasePlayer) =>
                   setOmakasePlayer((prev) => prev ?? omakasePlayer)
@@ -728,7 +727,7 @@ const OmakasePlayerTamsComponent = React.memo(
                 omakasePlayer,
                 timeline,
                 timelineBuilderFlows,
-                timelineBuilderFlowSegments,
+                flowsSegments,
                 markerLaneMapRef.current,
                 timeRange,
                 videoInfo.markerOffset,
