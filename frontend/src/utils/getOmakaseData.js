@@ -1,16 +1,18 @@
-import { parseTimerangeObj, parseTimerangeStr } from "@/utils/parseTimerange";
+import {
+  parseTimerangeObjBigInt,
+  parseTimerangeStrBigInt,
+} from "@/utils/parseTimerange";
 
-import { DateTime } from "luxon";
 import paginationFetcher from "@/utils/paginationFetcher";
 import { useApi } from "@/hooks/useApi";
-import { TimeRangeUtil } from "../views/OmakasePlayer/util/time-range-util";
 
 const DEFAULT_SEGMENTATION_DURATION = 300;
+const NANOS_PER_SECOND = 1_000_000_000n;
 
 const shouldExcludeFlow = (flow) =>
   flow.tags?.hls_exclude?.toLowerCase() === "true";
 
-const getFlowAndQueue = async ({ type, id }) => {
+const getFlowAndRelated = async ({ type, id }) => {
   const { get } = useApi();
   let flow = {};
   const relatedFlowQueue = [];
@@ -44,46 +46,11 @@ const getFlowAndQueue = async ({ type, id }) => {
   }
 
   const relatedFlows = await getFlowHierarchy(relatedFlowQueue);
-  return { flow, relatedFlows };
-};
-
-function findLongestTimerange(flows) {
-  const range = flows.reduce((acc, currentFlow) => {
-    const parsedTimeRange = TimeRangeUtil.parseTimeRange(currentFlow.timerange);
-
-    if (
-      parsedTimeRange.start === undefined ||
-      parsedTimeRange.end === undefined
-    ) {
-      return acc;
-    }
-    const start =
-      TimeRangeUtil.timeMomentToMilliseconds(parsedTimeRange.start) * 1_000_000;
-    const end =
-      TimeRangeUtil.timeMomentToMilliseconds(parsedTimeRange.end) * 1_000_000;
-    if (!acc) {
-      return { start, end };
-    }
-
-    return {
-      start: start > acc.start ? start : acc.start,
-      end: end < acc.end ? end : acc.end,
-    };
-  }, null);
-
-  if (!range) {
-    return undefined;
-  }
-
-  return TimeRangeUtil.formatTimeRangeExpr(
-    TimeRangeUtil.toTimeRange(
-      TimeRangeUtil.nanosecondsToTimeMoment(range.start),
-      TimeRangeUtil.nanosecondsToTimeMoment(range.end),
-      true,
-      false
-    )
+  const sortedRelatedFlows = relatedFlows.sort(
+    (a, b) => a.avg_bit_rate - b.avg_bit_rate
   );
-}
+  return { flow, relatedFlows: sortedRelatedFlows };
+};
 
 const getFlowHierarchy = async (relatedFlowQueue) => {
   const { get } = useApi();
@@ -114,207 +81,157 @@ const getFlowHierarchy = async (relatedFlowQueue) => {
   return relatedFlows;
 };
 
-const getMaxTimerange = ({ flow, relatedFlows }) => {
-  const allTimeranges = [
-    parseTimerangeStr(flow.timerange),
-    ...relatedFlows.map(({ timerange }) => parseTimerangeStr(timerange)),
-  ];
+const getMaxTimerange = (flows) => {
+  if (!flows.length) return { start: null, end: null };
 
-  const validStartTimes = allTimeranges
-    .filter(({ start }) => start)
-    .map(({ start }) => start);
+  let minStart = flows[0].timerange.start;
+  let maxEnd = flows[0].timerange.end;
 
-  const validEndTimes = allTimeranges
-    .filter(({ end }) => end)
-    .map(({ end }) => end);
+  for (let i = 1; i < flows.length; i++) {
+    const { start, end } = flows[i].timerange;
+    if (start < minStart) minStart = start;
+    if (end > maxEnd) maxEnd = end;
+  }
+
+  return { start: minStart, end: maxEnd };
+};
+
+const parseAndFilterFlows = (flows) => {
+  const result = [];
+  const validFormats = new Set([
+    "urn:x-nmos:format:video",
+    "urn:x-nmos:format:audio",
+  ]);
+
+  for (const flow of flows) {
+    if (!validFormats.has(flow.format)) continue;
+
+    try {
+      const parsedTimerange = parseTimerangeStrBigInt(flow.timerange);
+      if (
+        parsedTimerange.start !== undefined &&
+        parsedTimerange.end !== undefined
+      ) {
+        result.push({ ...flow, timerange: parsedTimerange });
+      }
+    } catch (error) {
+      // Skip flows with parsing errors
+    }
+  }
+
+  return result;
+};
+
+const getSegmentationTimerange = async (flows) => {
+  // Filter for video flows, Video must take priority if any are present
+  const videoFlows = flows.filter(
+    ({ format }) => format === "urn:x-nmos:format:video"
+  );
+
+  // Determine which flows to use for calculation
+  const flowsToUse = videoFlows.length > 0 ? videoFlows : flows;
+
+  if (flowsToUse.length === 0) {
+    return {
+      timerange: { start: null, end: null },
+      flowId: null,
+      segments: null,
+    };
+  }
+
+  // Find the flow with the earliest end time
+  const earliestEndFlow = flowsToUse.reduce((earliest, current) =>
+    current.timerange.end < earliest.timerange.end ? current : earliest
+  );
+
+  const windowTimerange = {
+    start:
+      earliestEndFlow.timerange.end -
+      BigInt(DEFAULT_SEGMENTATION_DURATION) * NANOS_PER_SECOND,
+    end: earliestEndFlow.timerange.end,
+  };
+
+  const windowSegments = await paginationFetcher(
+    `/flows/${
+      earliestEndFlow.id
+    }/segments?limit=300&timerange=${parseTimerangeObjBigInt(windowTimerange)}`
+  );
+
+  if (windowSegments.length === 0) {
+    return {
+      timerange: { start: null, end: null },
+      flowId: null,
+      segments: null,
+    };
+  }
+
+  if (windowSegments.length === 1) {
+    return {
+      timerange: parseTimerangeStrBigInt(windowSegments[0].timerange),
+      flowId: null,
+      segments: null,
+    };
+  }
 
   return {
-    start: validStartTimes.length ? DateTime.max(...validStartTimes) : null,
-    end: validEndTimes.length ? DateTime.min(...validEndTimes) : null,
+    timerange: {
+      start: parseTimerangeStrBigInt(windowSegments[0].timerange).start,
+      end: parseTimerangeStrBigInt(
+        windowSegments[windowSegments.length - 1].timerange
+      ).end,
+    },
+    flowId: earliestEndFlow.id,
+    segments: windowSegments,
   };
 };
 
-function findLongestTimerangeFromSegments(flowSegments, timerange) {
-  const parsedTimerange = TimeRangeUtil.parseTimeRange(timerange);
-  const start = TimeRangeUtil.timeMomentToNanoseconds(parsedTimerange.start);
-  const end = TimeRangeUtil.timeMomentToNanoseconds(parsedTimerange.end);
-  const range = flowSegments.reduce(
-    (acc, currentSegments) => {
-      if (currentSegments.length === 0) {
-        return acc;
-      }
-
-      const firstSegment = currentSegments.at(0);
-      const lastSegment = currentSegments.at(-1);
-
-      if (
-        TimeRangeUtil.parseTimeRange(lastSegment.timerange).end === undefined
-      ) {
-        return acc;
-      }
-
-      const start = TimeRangeUtil.timeMomentToNanoseconds(
-        TimeRangeUtil.parseTimeRange(firstSegment.timerange).start
-      );
-      const end = TimeRangeUtil.timeMomentToNanoseconds(
-        TimeRangeUtil.parseTimeRange(lastSegment.timerange).end
-      );
-
-      if (start === undefined || end === undefined) {
-        return acc;
-      }
-
-      return {
-        start: start > acc.start ? start : acc.start,
-        end: end < acc.end ? end : acc.end,
-      };
-    },
-    {
-      start: start,
-      end: end,
-    }
-  );
-
-  return TimeRangeUtil.formatTimeRangeExpr(
-    TimeRangeUtil.toTimeRange(
-      TimeRangeUtil.nanosecondsToTimeMoment(range.start),
-      TimeRangeUtil.nanosecondsToTimeMoment(range.end),
-      true,
-      false
-    )
-  );
-}
-
-function resolveTimeRangeForLastNSeconds(timeRange, seconds) {
-  if (!timeRange) {
-    return undefined;
-  }
-  if (TimeRangeUtil.timerangeExprDuration(timeRange) < seconds) {
-    return timeRange;
-  }
-  const parsedTimeRange = TimeRangeUtil.parseTimeRange(timeRange);
-  const endTime = TimeRangeUtil.timeMomentToNanoseconds(parsedTimeRange.end);
-  const startTime = endTime - seconds * 1_000_000_000;
-
-  const startMoment = TimeRangeUtil.nanosecondsToTimeMoment(startTime);
-
-  const newTimeRange = TimeRangeUtil.toTimeRange(
-    startMoment,
-    parsedTimeRange.end,
-    true,
-    false
-  );
-  return TimeRangeUtil.formatTimeRangeExpr(newTimeRange);
-}
-
 const getOmakaseData = async ({ type, id, timerange }) => {
-  let { flow, relatedFlows } = await getFlowAndQueue({ type, id });
-  relatedFlows = relatedFlows.sort((a, b) => a.avg_bit_rate - b.avg_bit_rate);
-  const maxTimerange = getMaxTimerange({ flow, relatedFlows });
-  const maxTimerangeDuration =
-    maxTimerange.end.toSeconds() - maxTimerange.start.toSeconds();
+  const { flow, relatedFlows } = await getFlowAndRelated({ type, id });
+  const timerangeValidFlows = parseAndFilterFlows([flow, ...relatedFlows]);
 
-  if (timerange) {
-    // player requested a specific timerange
-    const segmentsTimerange = timerange;
+  const maxTimerange = getMaxTimerange(timerangeValidFlows);
+  const parsedMaxTimerange = parseTimerangeObjBigInt(maxTimerange);
 
-    const parsedMaxTimeRange = parseTimerangeObj(maxTimerange);
-    const fetchPromises = [
-      paginationFetcher(
-        `/flows/${flow.id}/segments?limit=300&timerange=${segmentsTimerange}`
-      ).then((result) => [flow.id, result]),
-      ...relatedFlows.map(({ id }) =>
-        paginationFetcher(
-          `/flows/${id}/segments?limit=300&timerange=${segmentsTimerange}`
-        ).then((result) => [id, result])
-      ),
-    ];
-    const flowSegments = Object.fromEntries(await Promise.all(fetchPromises));
-    return {
-      flow,
-      relatedFlows,
-      flowSegments,
-      maxTimerange: parsedMaxTimeRange,
-      timerange: segmentsTimerange,
-    };
-  } else {
-    // initial player load, since there is no specified time range, we use a simple
-    // heuristic to find DEFAULT_SEGMENTATION_DURATION seconds of playable content
+  const segmentsCache = {};
 
-    // const segmentsTimerange = parseTimerangeObj({
-    //   includesStart: true,
-    //   start:
-    //     maxTimerangeDuration > DEFAULT_SEGMENTATION_DURATION
-    //       ? DateTime.fromSeconds(
-    //           maxTimerange.end.toSeconds() - DEFAULT_SEGMENTATION_DURATION
-    //         )
-    //       : maxTimerange.start,
-    //   end: maxTimerange.end,
-    //   includesEnd: false,
-    // });
-    const totalTimerange = findLongestTimerange([flow, ...relatedFlows]);
-    const segmentsTimerange = resolveTimeRangeForLastNSeconds(
-      totalTimerange,
-      DEFAULT_SEGMENTATION_DURATION
-    );
-    const parsedMaxTimeRange = parseTimerangeObj(maxTimerange);
-    let fetchPromises = [
-      paginationFetcher(
-        `/flows/${flow.id}/segments?limit=300&timerange=${segmentsTimerange}`
-      ).then((result) => [flow.id, result]),
-      ...relatedFlows.map(({ id }) =>
-        paginationFetcher(
-          `/flows/${id}/segments?limit=300&timerange=${segmentsTimerange}`
-        ).then((result) => [id, result])
-      ),
-    ];
-    // initial flow segments, the issue might arise if a certain subflow is much longer than others
-    // so we don't immediately use given segments since the video might not be playable (e.g. only thumbnails)
-    const initialFlowSegments = Object.fromEntries(
-      await Promise.all(fetchPromises)
-    );
+  let parsedTimerange = timerange;
+  let segmentationResult = null;
 
-    // longest timerange present in segments
-    const longestTimerangeFromSegments = findLongestTimerangeFromSegments(
-      Object.values(initialFlowSegments),
-      segmentsTimerange
-    );
+  if (!timerange) {
+    segmentationResult = await getSegmentationTimerange(timerangeValidFlows);
+    parsedTimerange = parseTimerangeObjBigInt(segmentationResult.timerange);
 
-    // we use the latest time moment where all segments are present and then calculate the start time moment
-    const validRequiredLengthTimerange = resolveTimeRangeForLastNSeconds(
-      TimeRangeUtil.formatTimeRangeExpr(
-        TimeRangeUtil.toTimeRange(
-          TimeRangeUtil.parseTimeRange(parsedMaxTimeRange).start,
-
-          TimeRangeUtil.parseTimeRange(longestTimerangeFromSegments).end,
-          true,
-          false
-        )
-      ),
-      DEFAULT_SEGMENTATION_DURATION
-    );
-
-    fetchPromises = [
-      paginationFetcher(
-        `/flows/${flow.id}/segments?limit=300&timerange=${validRequiredLengthTimerange}`
-      ).then((result) => [flow.id, result]),
-      ...relatedFlows.map(({ id }) =>
-        paginationFetcher(
-          `/flows/${id}/segments?limit=300&timerange=${validRequiredLengthTimerange}`
-        ).then((result) => [id, result])
-      ),
-    ];
-
-    const flowSegments = Object.fromEntries(await Promise.all(fetchPromises));
-
-    return {
-      flow,
-      relatedFlows,
-      flowSegments,
-      maxTimerange: parsedMaxTimeRange,
-      timerange: validRequiredLengthTimerange,
-    };
+    // Cache the segments if they were fetched
+    if (segmentationResult.flowId && segmentationResult.segments) {
+      segmentsCache[segmentationResult.flowId] = segmentationResult.segments;
+    }
   }
+
+  const fetchPromises = [];
+  // Add simple promises for segments already retrieved
+  Object.entries(segmentsCache).forEach((entry) =>
+    fetchPromises.push(Promise.resolve(entry))
+  );
+  // Add promises for all remaining flow segment requests
+  [flow.id, ...relatedFlows.map(({ id }) => id)]
+    .filter((id) => !(id in segmentsCache))
+    .forEach((id) =>
+      fetchPromises.push(
+        paginationFetcher(
+          `/flows/${id}/segments?limit=300&timerange=${parsedTimerange}`
+        ).then((result) => [id, result])
+      )
+    );
+
+  const flowSegments = Object.fromEntries(await Promise.all(fetchPromises));
+
+  return {
+    flow,
+    relatedFlows,
+    flowSegments,
+    maxTimerange: parsedMaxTimerange,
+    timerange: parsedTimerange,
+  };
 };
 
 export default getOmakaseData;
