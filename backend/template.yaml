@@ -181,6 +181,32 @@ Resources:
         ]
     Condition: DeployHls
 
+  OmakaseExportEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub
+        - omakase-tams-${id}
+        - id:
+            !Select [
+              4,
+              !Split ["-", !Select [2, !Split [/, !Ref "AWS::StackId"]]],
+            ]
+
+  AuthRolePolicyTools:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      RoleName: !ImportValue
+        Fn::Sub: ${ApiStackName}-AuthRoleName
+      PolicyName: !Ref AWS::StackName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - events:PutEvents
+            Resource:
+              - !GetAtt OmakaseExportEventBus.Arn
+
   HlsApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -269,6 +295,9 @@ Resources:
     Condition: DeployIngestFfmpeg
 
 Outputs:
+  OmakaseExportEventBus:
+    Value: !Ref OmakaseExportEventBus
+
   HlsApiEndpoint:
     Value: !If
       - DeployHlsApi
