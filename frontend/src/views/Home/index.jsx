@@ -20,6 +20,10 @@ const Home = () => {
 
   > **NOTE**: The Ingest workflow for both MediaLive and MediaConvert uses the HLS manifest file produced by those services to determine how and what to ingest. Therefore only output types of HLS for Channels and Jobs will support ingest.
 
+  - **FFmpeg - Export** shows a list of FFmpeg exports that have been triggered and their status. You can also download the results from here.
+  - **FFmpeg - Rules** shows a list of event driven FFmpeg Conversion Rules that are setup. They can be reviewed and deleted from here.
+  - **FFmpeg - Jobs** shows a list of batch FFmpeg Conversion Jobs that have been triggere. They can be reviewed from here.
+
   ## Special Tags
 
   ### TAMS Flow Tags
@@ -34,7 +38,7 @@ const Home = () => {
 
   | Tag Key                  | Type     | Notes |
   | ------------------------ | -------- | ----- |
-  | ***hls_exclude***        | _bool_   | Used to indicate the source should be excluded from HLS manifest generation.
+  | ***hls_exclude***        | _bool_   | Used to indicate the source should be excluded from HLS manifest generation. This option includes exclusion from the Omakase Player.
   `;
 
   return <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>;
