@@ -3,20 +3,17 @@ import {
   EventBridgeClient,
   PutEventsCommand,
 } from "@aws-sdk/client-eventbridge";
+import { AWS_REGION, OMAKASE_EVENT_BUS } from "@/constants"
 
 export async function executeExport(formData, editTimeranges, flows) {
   const { credentials } = await fetchAuthSession();
 
-  const region =
-    //@ts-ignore
-    import.meta.env.VITE_APP_AWS_REGION;
-
-  if (region === undefined) {
-    console.error("VITE_EXPORT_EVENT_BRIDGE_REGION is not defined in .env");
+  if (AWS_REGION === undefined) {
+    console.error("AWS_REGION is not defined");
   }
 
   const client = new EventBridgeClient({
-    region: region,
+    region: AWS_REGION,
     credentials: credentials,
   });
   let configuration = {};
@@ -33,10 +30,6 @@ export async function executeExport(formData, editTimeranges, flows) {
   }
 
   const operation = formData.operation.replaceAll(" ", "_").toUpperCase();
-
-  const eventBusName =
-    //@ts-ignore
-    import.meta.env.VITE_APP_OMAKASE_EXPORT_EVENT_BUS ?? "omakase-tams";
 
   const editFlows = Object.keys(formData.flows).filter(
     (key) => formData.flows[key]
@@ -64,27 +57,10 @@ export async function executeExport(formData, editTimeranges, flows) {
           operation: operation,
           configuration: configuration,
         }),
-        EventBusName: eventBusName,
+        EventBusName: OMAKASE_EVENT_BUS,
       },
     ],
   };
 
   await client.send(new PutEventsCommand(params));
-}
-
-export function createInitialFormData(flows) {
-  return {
-    operation: "Segment Concatenation",
-    format: "TS",
-    bucket: "",
-    path: "",
-    filename: "",
-    label: "",
-    flows: flows
-      .filter((flow) => flow.format === "urn:x-nmos:format:audio")
-      .reduce((acc, flow) => {
-        acc[flow.id] = true;
-        return acc;
-      }, {}),
-  };
 }

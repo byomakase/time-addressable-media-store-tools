@@ -5,26 +5,34 @@ import {
   FormField,
   Select,
   Input,
-  Checkbox,
+  Multiselect,
   ExpandableSection,
   SpaceBetween,
   Button,
   Box,
 } from "@cloudscape-design/components";
-import useStore from "../stores/useStore";
-import useOmakaseStore from "../stores/useOmakaseStore";
-import { createInitialFormData, executeExport } from "../utils/omakase";
+import useStore from "@/stores/useStore";
+import { executeExport } from "@/utils/executeExport";
 
-export default function OmakaseModal({ editTimeranges, flows }) {
-  const [formData, setFormData] = useState(createInitialFormData(flows));
-  const [isSpinnerVisible, setIsSpinnerVisible] = useState(false);
+export default function OmakaseExportModal({ editTimeranges, flows, onModalToggle, isModalOpen }) {
+  const [formData, setFormData] = useState({
+    operation: "Segment Concatenation",
+    format: "TS",
+    bucket: "",
+    path: "",
+    filename: "",
+    label: "",
+    flows: flows
+      .filter((flow) => flow.format === "urn:x-nmos:format:audio")
+      .reduce((acc, flow) => {
+        acc[flow.id] = true;
+        return acc;
+      }, {})
+});
+  const [isLoading, setIsLoading] = useState(false);
   const [showAdvancedContent, setShowAdvancedContent] = useState(false);
   const addAlertItem = useStore((state) => state.addAlertItem);
   const delAlertItem = useStore((state) => state.delAlertItem);
-
-  const { omakaseModalVisible, setOmakaseModalVisible } = useOmakaseStore(
-    (state) => state
-  );
 
   const operations = ["Segment Concatenation", "Flow Creation"];
   const formats = ["TS", "MP4"];
@@ -33,7 +41,7 @@ export default function OmakaseModal({ editTimeranges, flows }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSpinnerVisible(true);
+    setIsLoading(true);
     const id = crypto.randomUUID();
     try {
       await executeExport(formData, editTimeranges, flows);
@@ -55,8 +63,8 @@ export default function OmakaseModal({ editTimeranges, flows }) {
         onDismiss: () => delAlertItem(id),
       });
     } finally {
-      setOmakaseModalVisible(false);
-      setIsSpinnerVisible(false);
+      onModalToggle(false);
+      setIsLoading(false);
     }
   };
 
@@ -82,8 +90,8 @@ export default function OmakaseModal({ editTimeranges, flows }) {
   return (
     <>
       <Modal
-        onDismiss={() => setOmakaseModalVisible(false)}
-        visible={omakaseModalVisible}
+        onDismiss={() => onModalToggle(false)}
+        visible={isModalOpen}
         header="Export"
       >
         <SpaceBetween direction="vertical" size="l">
@@ -123,6 +131,7 @@ export default function OmakaseModal({ editTimeranges, flows }) {
           )}
 
           {formData.operation === "Flow Creation" && (
+            <>
             <FormField label="Label">
               <Input
                 value={formData.label}
@@ -132,27 +141,30 @@ export default function OmakaseModal({ editTimeranges, flows }) {
                 placeholder="Label"
               />
             </FormField>
-          )}
+         
 
-          <SpaceBetween direction="vertical" size="s">
-            {flows
-              .filter((flow) => flow.format === "urn:x-nmos:format:audio")
-              .map((flow) => (
-                <Checkbox
-                  key={flow.id}
-                  checked={formData.flows[flow.id] || false}
-                  onChange={({ detail }) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      flows: { ...prev.flows, [flow.id]: detail.checked },
-                    }))
-                  }
-                >
-                  {flow.description ?? ""}
-                </Checkbox>
-              ))}
-          </SpaceBetween>
-
+          <FormField label="Audio Flows">
+            <Multiselect
+              selectedOptions={flows
+                .filter((flow) => flow.format === "urn:x-nmos:format:audio" && formData.flows[flow.id])
+                .map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
+              onChange={({ detail }) => {
+                const selectedIds = detail.selectedOptions.map(option => option.value);
+                const audioFlows = flows.filter(flow => flow.format === "urn:x-nmos:format:audio");
+                const newFlows = {};
+                audioFlows.forEach(flow => {
+                  newFlows[flow.id] = selectedIds.includes(flow.id);
+                });
+                setFormData(prev => ({ ...prev, flows: { ...prev.flows, ...newFlows } }));
+              }}
+              options={flows
+                .filter((flow) => flow.format === "urn:x-nmos:format:audio")
+                .map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
+              placeholder="Select audio flows"
+            />
+          </FormField>
+          </>
+ )}
           <ExpandableSection
             headerText="Advanced"
             variant="footer"
@@ -191,16 +203,14 @@ export default function OmakaseModal({ editTimeranges, flows }) {
           </ExpandableSection>
 
           <Box float="right">
-            <SpaceBetween direction="horizontal" size="xs">
-              {isSpinnerVisible && <Spinner />}
               <Button
                 variant="primary"
                 disabled={isExportButtonDisabled}
                 onClick={handleSubmit}
+                loading={isLoading}
               >
                 Export
               </Button>
-            </SpaceBetween>
           </Box>
         </SpaceBetween>
       </Modal>
