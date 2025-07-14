@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Modal,
-  Spinner,
   FormField,
   Select,
   Input,
@@ -28,7 +27,7 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
         acc[flow.id] = true;
         return acc;
       }, {})
-});
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [showAdvancedContent, setShowAdvancedContent] = useState(false);
   const addAlertItem = useStore((state) => state.addAlertItem);
@@ -38,6 +37,7 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
   const formats = ["TS", "MP4"];
   const isExportButtonDisabled =
     formData.operation === "Flow Creation" && formData.label === "";
+  const audioFlows = flows.filter((flow) => flow.format === "urn:x-nmos:format:audio")
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -131,7 +131,6 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
           )}
 
           {formData.operation === "Flow Creation" && (
-            <>
             <FormField label="Label">
               <Input
                 value={formData.label}
@@ -141,30 +140,25 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
                 placeholder="Label"
               />
             </FormField>
-         
+          )}
 
-          <FormField label="Audio Flows">
+          {audioFlows.length > 0 && <FormField label="Audio Flows">
             <Multiselect
-              selectedOptions={flows
-                .filter((flow) => flow.format === "urn:x-nmos:format:audio" && formData.flows[flow.id])
-                .map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
+              selectedOptions={audioFlows.map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
               onChange={({ detail }) => {
                 const selectedIds = detail.selectedOptions.map(option => option.value);
-                const audioFlows = flows.filter(flow => flow.format === "urn:x-nmos:format:audio");
                 const newFlows = {};
                 audioFlows.forEach(flow => {
                   newFlows[flow.id] = selectedIds.includes(flow.id);
                 });
                 setFormData(prev => ({ ...prev, flows: { ...prev.flows, ...newFlows } }));
               }}
-              options={flows
-                .filter((flow) => flow.format === "urn:x-nmos:format:audio")
+              options={audioFlows
                 .map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
               placeholder="Select audio flows"
             />
-          </FormField>
-          </>
- )}
+          </FormField>}
+
           <ExpandableSection
             headerText="Advanced"
             variant="footer"
@@ -203,14 +197,14 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
           </ExpandableSection>
 
           <Box float="right">
-              <Button
-                variant="primary"
-                disabled={isExportButtonDisabled}
-                onClick={handleSubmit}
-                loading={isLoading}
-              >
-                Export
-              </Button>
+            <Button
+              variant="primary"
+              disabled={isExportButtonDisabled}
+              onClick={handleSubmit}
+              loading={isLoading}
+            >
+              Export
+            </Button>
           </Box>
         </SpaceBetween>
       </Modal>
