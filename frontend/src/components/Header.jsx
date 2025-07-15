@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TopNavigation } from "@cloudscape-design/components";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { Mode, applyMode } from "@cloudscape-design/global-styles";
+import { APP_TITLE } from "@/constants";
 
 const Header = () => {
   const [mode, setMode] = useState(Mode.Dark);
@@ -25,7 +26,7 @@ const Header = () => {
     <TopNavigation
       identity={{
         href: "/",
-        title: "TAMS Tools",
+        title: APP_TITLE ?? "TAMS Tools",
       }}
       utilities={[
         {
