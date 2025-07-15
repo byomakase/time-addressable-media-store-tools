@@ -1,23 +1,22 @@
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-
+import useSWR from "swr";
 import { AWS_REGION } from "@/constants";
 import { fetchAuthSession } from "aws-amplify/auth";
-import useSWRMutation from "swr/mutation";
 
-export const useParameter = () => {
-  const { trigger, isMutating } = useSWRMutation(
-    "/ssm-parameters",
-    (_, { arg }) =>
+export const useParameter = (parameterName) => {
+  const { data, error, isLoading } = useSWR(
+    ["/ssm-parameters", parameterName],
+    ([, parameterName]) =>
       fetchAuthSession().then((session) =>
-        new SSMClient({
-          region: AWS_REGION,
-          credentials: session.credentials,
-        }).send(new GetParameterCommand(arg)).then((response) => response)
+        new SSMClient({ region: AWS_REGION, credentials: session.credentials })
+          .send(new GetParameterCommand({ Name: parameterName }))
+          .then((response) => JSON.parse(response.Parameter.Value))
       )
   );
 
   return {
-    get: trigger,
-    isGetting: isMutating,
+    parameter: data,
+    isLoading,
+    error,
   };
 };

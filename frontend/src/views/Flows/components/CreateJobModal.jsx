@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Box,
   Button,
@@ -11,19 +11,17 @@ import {
   TextContent,
 } from "@cloudscape-design/components";
 import { Link } from "react-router-dom";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import useAlertsStore from "@/stores/useAlertsStore";
-import { fetchAuthSession } from "aws-amplify/auth";
-import { AWS_REGION, AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
+import { AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
 import { useJobStart } from "@/hooks/useFfmpeg";
 import createFFmegFlow from "@/utils/createFFmegFlow";
+import { useParameter } from "@/hooks/useParameters";
 
 const CreateJobModal = ({
   modalVisible,
   setModalVisible,
   selectedFlowId,
 }) => {
-  const [commands, setCommands] = useState([]);
   const [timerange, setTimerange] = useState("");
   const [outputFlow, setoutputFlow] = useState("");
   const [ffmpeg, setFfmpeg] = useState();
@@ -31,25 +29,14 @@ const CreateJobModal = ({
   const { start } = useJobStart();
   const addAlertItem = useAlertsStore((state) => state.addAlertItem);
   const delAlertItem = useAlertsStore((state) => state.delAlertItem);
+  const { parameter: commandsData } = useParameter(AWS_FFMPEG_COMMANDS_PARAMETER);
 
-  useEffect(() => {
-    const fetchCommands = async () => {
-      const data = await fetchAuthSession().then((session) =>
-        new SSMClient({ region: AWS_REGION, credentials: session.credentials })
-          .send(new GetParameterCommand({ Name: AWS_FFMPEG_COMMANDS_PARAMETER }))
-          .then((response) => JSON.parse(response.Parameter.Value))
-      );
-      setCommands(
-        Object.entries(data)
-          .filter(([_, value]) => value.tams)
-          .map(([label, value]) => ({
-            label,
-            value,
-          }))
-      );
-    };
-    fetchCommands();
-  }, []);
+  const commands = useMemo(() => {
+    if (!commandsData) return [];
+    return Object.entries(commandsData)
+      .filter(([_, value]) => value.tams)
+      .map(([label, value]) => ({ label, value }));
+  }, [commandsData]);
 
   const handleDismiss = () => {
     setModalVisible(false);
