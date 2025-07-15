@@ -4,8 +4,12 @@ import {
   PeriodMarker,
 } from "@byomakase/omakase-player";
 import React, { useEffect, useState } from "react";
-import OmakaseExportModal from "../OmakaseModal/OmakaseExportModal";
+// @ts-ignore
+import OmakaseExportModal from "../../../../components/OmakaseExportModal";
+import { PopUpIcon } from "../../icons/PopUpIcon";
+import "./OmakaseSegmentationHeader.css";
 import { Flow, FlowSegment } from "@byomakase/omakase-react-components";
+import { createEditTimeranges } from "../../util/export-util";
 
 type OmakaseSegmentationHeaderProps = {
   segmentationLanes: MarkerLane[];
@@ -22,10 +26,12 @@ const OmakaseSegmentationHeader = ({
   source,
   onSegementationClickCallback,
   flows,
-  flowSegments,
   markerOffset,
   omakasePlayer,
 }: OmakaseSegmentationHeaderProps) => {
+  const [editTimeranges, setEditTimeranges] = useState();
+  // @ts-ignore
+  const [omakaseModalVisible, setOmakaseModalVisible] = useState(false);
   const segmentationNamesClassName =
     segmentationLanes.length < 3
       ? "segmentation-names"
@@ -86,6 +92,23 @@ const OmakaseSegmentationHeader = ({
       );
   }, [source]);
 
+  const handleExportModal = () => {
+    setEditTimeranges(
+      // @ts-ignore
+      createEditTimeranges(source, markerOffset, omakasePlayer)
+    );
+    setOmakaseModalVisible(true);
+  };
+
+  if (exportDisabled) {
+    return (
+      <div className="segmentation-export-disabled">
+        <PopUpIcon />
+        EXPORT
+      </div>
+    );
+  }
+
   return (
     <div className={segmentationHeaderClassName}>
       {segmentationLanes.length > 1 && (
@@ -106,13 +129,18 @@ const OmakaseSegmentationHeader = ({
 
       {source &&
         flows.find((flow) => flow.format === "urn:x-nmos:format:video") && (
-          <OmakaseExportModal
-            flows={flows}
-            source={source}
-            markerOffset={markerOffset}
-            exportDisabled={exportDisabled}
-            omakasePlayer={omakasePlayer}
-          />
+          <>
+            <div className="segmentation-export" onClick={handleExportModal}>
+              <PopUpIcon />
+              EXPORT
+            </div>
+            <OmakaseExportModal
+              editTimeranges={editTimeranges}
+              flows={flows}
+              onModalToggle={setOmakaseModalVisible}
+              isModalOpen={omakaseModalVisible}
+            />
+          </>
         )}
     </div>
   );

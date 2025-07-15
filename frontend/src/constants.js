@@ -12,6 +12,7 @@ export const AWS_FFMPEG_ENDPOINT = import.meta.env.VITE_APP_AWS_FFMPEG_ENDPOINT;
 export const AWS_FFMPEG_COMMANDS_PARAMETER = import.meta.env.VITE_APP_AWS_FFMPEG_COMMANDS_PARAMETER;
 export const AWS_FFMPEG_BATCH_ARN = import.meta.env.VITE_APP_AWS_FFMPEG_BATCH_ARN;
 export const AWS_FFMPEG_EXPORT_ARN = import.meta.env.VITE_APP_AWS_FFMPEG_EXPORT_ARN;
+export const OMAKASE_EXPORT_EVENT_BUS = import.meta.env.VITE_APP_OMAKASE_EXPORT_EVENT_BUS;
 /************* END OF ENVIRONMENT VARIABLES **************/
 export const PAGE_SIZE = 20;
 export const PAGE_SIZE_PREFERENCE = {
