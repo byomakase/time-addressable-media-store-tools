@@ -4,15 +4,15 @@ import {
   SpaceBetween,
   Table,
 } from "@cloudscape-design/components";
-import useStore from "@/stores/useStore";
+import usePreferencesStore from "@/stores/usePreferencesStore";
 
 import { SEGMENT_COUNT, DATE_FORMAT } from "@/constants";
 import { parseTimerangeDateTime } from "@/utils/timerange";
 import { useLastN } from "@/hooks/useSegments";
 
 const SegmentsTab = ({ flowId }) => {
-  const preferences = useStore((state) => state.segmentsPreferences);
-  const setPreferences = useStore((state) => state.setSegmentsPreferences);
+  const preferences = usePreferencesStore((state) => state.segmentsPreferences);
+  const setPreferences = usePreferencesStore((state) => state.setSegmentsPreferences);
   const { segments, isLoading: loadingSegments } = useLastN(flowId, SEGMENT_COUNT);
 
   const columnDefinitions = [

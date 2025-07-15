@@ -12,7 +12,7 @@ import {
 } from "@cloudscape-design/components";
 import { AWS_HLS_INGEST_ARN } from "@/constants";
 import { useStateMachine } from "@/hooks/useStateMachine";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import stringify from "json-stable-stringify";
 
 const StartIngestModal = ({
@@ -24,8 +24,8 @@ const StartIngestModal = ({
   const [useEpoch, setUseEpoch] = useState(false);
   const [label, setLabel] = useState("");
   const { execute, isExecuting } = useStateMachine();
-  const addAlertItem = useStore((state) => state.addAlertItem);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
 
   const performAction = async () => {
     const id = `medialive-${selectedItem.id}-${Date.now()}`;

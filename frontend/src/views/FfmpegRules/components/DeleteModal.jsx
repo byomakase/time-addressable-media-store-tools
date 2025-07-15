@@ -5,13 +5,13 @@ import {
   SpaceBetween,
   TextContent,
 } from "@cloudscape-design/components";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import { useDeleteRule } from "@/hooks/useFfmpeg";
 
 const DeleteModal = ({ modalVisible, setModalVisible, selectedKey, setSelectedKey }) => {
   const { del, isDeleting } = useDeleteRule();
-  const addAlertItem = useStore((state) => state.addAlertItem);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
 
   const deleteRule = async () => {
     const [flowId, outputFlowId] = selectedKey.split("_");

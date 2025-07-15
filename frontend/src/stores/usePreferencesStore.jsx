@@ -2,23 +2,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { PAGE_SIZE } from "@/constants";
 
-const useStore = create(
+const usePreferencesStore = create(
   persist(
     (set) => ({
-      alertItems: [],
-      addAlertItem: (alertItem) =>
-        set((state) => ({
-          alertItems: [...state.alertItems, alertItem],
-        })),
-      delAlertItem: (id) =>
-        set((state) => ({
-          alertItems: state.alertItems.filter((item) => item.id !== id),
-        })),
-      addAlertItems: (alertItems) =>
-        set((state) => ({
-          alertItems: [...state.alertItems, ...alertItems],
-        })),
-
       flowsShowHierarchy: true,
       setFlowsShowHierarchy: (hierarchy) =>
         set({ flowsShowHierarchy: hierarchy }),
@@ -123,9 +109,9 @@ const useStore = create(
         set({ ffmpegJobsPreferences: preferences }),
     }),
     {
-      name: "tams-ui-storage",
+      name: "tams-ui-preferences",
     }
   )
 );
 
-export default useStore;
+export default usePreferencesStore;

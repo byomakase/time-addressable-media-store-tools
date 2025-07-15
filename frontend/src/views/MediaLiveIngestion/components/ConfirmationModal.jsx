@@ -5,7 +5,7 @@ import {
   SpaceBetween,
   TextContent,
 } from "@cloudscape-design/components";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import { useChannelStart, useChannelStop } from "@/hooks/useChannels";
 
 const ConfirmationModal = ({
@@ -18,8 +18,8 @@ const ConfirmationModal = ({
 }) => {
   const { start, isStarting } = useChannelStart();
   const { stop, isStopping } = useChannelStop();
-  const addAlertItem = useStore((state) => state.addAlertItem);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
 
   const handleDismiss = () => {
     setModalVisible(false);

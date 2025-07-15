@@ -1,4 +1,4 @@
-import useStore from "@/stores/useStore";
+import usePreferencesStore from "@/stores/usePreferencesStore";
 import { AWS_REGION, STATUS_MAPPINGS, PAGE_SIZE_PREFERENCE } from "@/constants";
 import {
   Box,
@@ -95,8 +95,8 @@ const collectionPreferencesProps = {
 };
 
 const FfmpegJobs = () => {
-  const preferences = useStore((state) => state.ffmpegJobsPreferences);
-  const setPreferences = useStore((state) => state.setFfmpegJobsPreferences);
+  const preferences = usePreferencesStore((state) => state.ffmpegJobsPreferences);
+  const setPreferences = usePreferencesStore((state) => state.setFfmpegJobsPreferences);
   const { jobs, isLoading } = useJobs();
   const { items, collectionProps, filterProps, paginationProps } =
     useCollection(isLoading ? [] : jobs, {

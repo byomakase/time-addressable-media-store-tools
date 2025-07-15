@@ -6,7 +6,7 @@ import {
   SpaceBetween,
   TextContent,
 } from "@cloudscape-design/components";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import { useDelete } from "@/hooks/useFlows";
 
 const DeleteModal = ({
@@ -16,8 +16,8 @@ const DeleteModal = ({
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { del } = useDelete();
-  const addAlertItems = useStore((state) => state.addAlertItems);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItems = useAlertsStore((state) => state.addAlertItems);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
 
   const deleteFlow = async () => {
     setIsDeleting(true);

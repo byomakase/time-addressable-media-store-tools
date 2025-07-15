@@ -10,11 +10,11 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import Header from "@/components/Header";
 import { useState } from "react";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 
 const Layout = () => {
   const [navigationOpen, setNavigationOpen] = useState(true);
-  const alertItems = useStore((state) => state.alertItems);
+  const alertItems = useAlertsStore((state) => state.alertItems);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 

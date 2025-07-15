@@ -17,7 +17,7 @@ import { useFlows } from "@/hooks/useFlows";
 import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useState } from "react";
-import useStore from "@/stores/useStore";
+import usePreferencesStore from "@/stores/usePreferencesStore";
 import CreateExportModal from "./components/CreateExportModal";
 import CreateRuleModal from "./components/CreateRuleModal";
 import CreateJobModal from "./components/CreateJobModal";
@@ -168,10 +168,10 @@ const collectionPreferencesProps = {
 };
 
 const Flows = () => {
-  const preferences = useStore((state) => state.flowsPreferences);
-  const setPreferences = useStore((state) => state.setFlowsPreferences);
-  const showHierarchy = useStore((state) => state.flowsShowHierarchy);
-  const setShowHierarchy = useStore((state) => state.setFlowsShowHierarchy);
+  const preferences = usePreferencesStore((state) => state.flowsPreferences);
+  const setPreferences = usePreferencesStore((state) => state.setFlowsPreferences);
+  const showHierarchy = usePreferencesStore((state) => state.flowsShowHierarchy);
+  const setShowHierarchy = usePreferencesStore((state) => state.setFlowsShowHierarchy);
   const { flows, isLoading } = useFlows();
   const [modalVisible, setModalVisible] = useState(false);
   const [actionId, setActionId] = useState("");

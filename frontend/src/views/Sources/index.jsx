@@ -13,7 +13,7 @@ import {
 import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useSources } from "@/hooks/useSources";
-import useStore from "@/stores/useStore";
+import usePreferencesStore from "@/stores/usePreferencesStore";
 import { PAGE_SIZE_PREFERENCE } from "@/constants";
 
 const columnDefinitions = [
@@ -114,10 +114,10 @@ const collectionPreferencesProps = {
 };
 
 const Sources = () => {
-  const preferences = useStore((state) => state.sourcesPreferences);
-  const setPreferences = useStore((state) => state.setSourcesPreferences);
-  const showHierarchy = useStore((state) => state.sourcesShowHierarchy);
-  const setShowHierarchy = useStore((state) => state.setSourcesShowHierarchy);
+  const preferences = usePreferencesStore((state) => state.sourcesPreferences);
+  const setPreferences = usePreferencesStore((state) => state.setSourcesPreferences);
+  const showHierarchy = usePreferencesStore((state) => state.sourcesShowHierarchy);
+  const setShowHierarchy = usePreferencesStore((state) => state.setSourcesShowHierarchy);
   const { sources, isLoading } = useSources();
   const { items, collectionProps, filterProps, paginationProps } =
     useCollection(isLoading ? [] : sources, {

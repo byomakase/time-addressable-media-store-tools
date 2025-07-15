@@ -10,7 +10,7 @@ import {
   Button,
   Box,
 } from "@cloudscape-design/components";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import { executeExport } from "@/utils/executeExport";
 
 export default function OmakaseExportModal({ editTimeranges, flows, onModalToggle, isModalOpen }) {
@@ -30,8 +30,8 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showAdvancedContent, setShowAdvancedContent] = useState(false);
-  const addAlertItem = useStore((state) => state.addAlertItem);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
 
   const operations = ["Segment Concatenation", "Flow Creation"];
   const formats = ["TS", "MP4"];

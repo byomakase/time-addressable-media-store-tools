@@ -12,7 +12,7 @@ import {
 } from "@cloudscape-design/components";
 import { Link } from "react-router-dom";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { AWS_REGION, AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
 import { useCreateRule } from "@/hooks/useFfmpeg";
@@ -28,8 +28,8 @@ const CreateRuleModal = ({
   const [ffmpeg, setFfmpeg] = useState();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { put } = useCreateRule();
-  const addAlertItem = useStore((state) => state.addAlertItem);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
 
   useEffect(() => {
     const fetchCommands = async () => {

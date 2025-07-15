@@ -8,7 +8,7 @@ import {
   SpaceBetween,
   TextContent,
 } from "@cloudscape-design/components";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import { useDeleteTimerange } from "@/hooks/useFlows";
 
 const DeleteTimeRangeModal = ({
@@ -17,8 +17,8 @@ const DeleteTimeRangeModal = ({
   selectedItems,
 }) => {
   const { delTimerange, isDeletingTimerange } = useDeleteTimerange();
-  const addAlertItems = useStore((state) => state.addAlertItems);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItems = useAlertsStore((state) => state.addAlertItems);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
   const [timerange, setTimerange] = useState("");
 
   const deleteTimerange = async () => {

@@ -11,7 +11,7 @@ import {
   TextContent,
 } from "@cloudscape-design/components";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import useStore from "@/stores/useStore";
+import useAlertsStore from "@/stores/useAlertsStore";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { AWS_REGION, AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
 import { useExportStart } from "@/hooks/useFfmpeg";
@@ -26,8 +26,8 @@ const CreateExportModal = ({
   const [ffmpeg, setFfmpeg] = useState();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { start } = useExportStart();
-  const addAlertItem = useStore((state) => state.addAlertItem);
-  const delAlertItem = useStore((state) => state.delAlertItem);
+  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
 
   useEffect(() => {
     const fetchCommands = async () => {
