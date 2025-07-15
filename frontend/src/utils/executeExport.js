@@ -3,9 +3,37 @@ import {
   EventBridgeClient,
   PutEventsCommand,
 } from "@aws-sdk/client-eventbridge";
-import { AWS_REGION, OMAKASE_EVENT_BUS } from "@/constants"
+import { AWS_REGION, OMAKASE_EXPORT_EVENT_BUS } from "@/constants";
 
-export async function executeExport(formData, editTimeranges, flows) {
+const getMaxBitRateVideoFlow = (flows) => {
+  const videoFlows = flows?.filter(
+    (flow) => flow.format === "urn:x-nmos:format:video"
+  );
+
+  if (!videoFlows?.length) return null;
+
+  if (videoFlows.some((flow) => flow.avg_bit_rate)) {
+    return videoFlows.reduce((max, flow) =>
+      !max.avg_bit_rate ||
+      (flow.avg_bit_rate && flow.avg_bit_rate > max.avg_bit_rate)
+        ? flow
+        : max
+    );
+  }
+
+  if (videoFlows.some((flow) => flow.max_bit_rate)) {
+    return videoFlows.reduce((max, flow) =>
+      !max.max_bit_rate ||
+      (flow.max_bit_rate && flow.max_bit_rate > max.max_bit_rate)
+        ? flow
+        : max
+    );
+  }
+
+  return videoFlows[0];
+};
+
+export const executeExport = async (formData, editTimeranges, flows) => {
   const { credentials } = await fetchAuthSession();
 
   if (AWS_REGION === undefined) {
@@ -34,13 +62,9 @@ export async function executeExport(formData, editTimeranges, flows) {
   const editFlows = Object.keys(formData.flows).filter(
     (key) => formData.flows[key]
   );
-
-  const firstVideoFlow = flows?.filter((flow) => {
-    return flow.format === "urn:x-nmos:format:video";
-  })[0];
-
-  if (firstVideoFlow) {
-    editFlows.push(firstVideoFlow.id);
+  const videoFlow = getMaxBitRateVideoFlow(flows);
+  if (videoFlow) {
+    editFlows.push(videoFlow.id);
   }
 
   const editPayload = editTimeranges.map((timeRange) => ({
@@ -57,10 +81,10 @@ export async function executeExport(formData, editTimeranges, flows) {
           operation: operation,
           configuration: configuration,
         }),
-        EventBusName: OMAKASE_EVENT_BUS,
+        EventBusName: OMAKASE_EXPORT_EVENT_BUS,
       },
     ],
   };
 
   await client.send(new PutEventsCommand(params));
-}
+};

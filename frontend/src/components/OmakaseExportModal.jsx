@@ -144,6 +144,7 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
 
           {audioFlows.length > 0 && <FormField label="Audio Flows">
             <Multiselect
+              inlineTokens
               selectedOptions={audioFlows
                 .filter(flow => formData.flows[flow.id])
                 .map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
@@ -161,7 +162,7 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
             />
           </FormField>}
 
-          <ExpandableSection
+          {formData.operation === "Segment Concatenation" && <ExpandableSection
             headerText="Advanced"
             variant="footer"
             expanded={showAdvancedContent}
@@ -196,7 +197,7 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
                 />
               </FormField>
             </SpaceBetween>
-          </ExpandableSection>
+          </ExpandableSection>}
 
           <Box float="right">
             <Button

@@ -7,11 +7,9 @@ import React, { useEffect, useState } from "react";
 // @ts-ignore
 import OmakaseExportModal from "../../../../components/OmakaseExportModal";
 import { PopUpIcon } from "../../icons/PopUpIcon";
-import "./OmakaseSegmentation.css";
+import "./OmakaseSegmentationHeader.css";
 import { Flow, FlowSegment } from "@byomakase/omakase-react-components";
-import { createEditTimeranges } from "../../util/omakase-export-util";
-// @ts-ignore
-import useOmakaseStore from "../../../../stores/useOmakaseStore";
+import { createEditTimeranges } from "../../util/export-util";
 
 type OmakaseSegmentationHeaderProps = {
   segmentationLanes: MarkerLane[];
@@ -33,8 +31,8 @@ const OmakaseSegmentationHeader = ({
 }: OmakaseSegmentationHeaderProps) => {
   const [editTimeranges, setEditTimeranges] = useState();
   // @ts-ignore
-const [omakaseModalVisible, setOmakaseModalVisible] = useState(false);
- const segmentationNamesClassName =
+  const [omakaseModalVisible, setOmakaseModalVisible] = useState(false);
+  const segmentationNamesClassName =
     segmentationLanes.length < 3
       ? "segmentation-names"
       : "segmentation-names segmentation-names-smaller";
@@ -136,7 +134,12 @@ const [omakaseModalVisible, setOmakaseModalVisible] = useState(false);
               <PopUpIcon />
               EXPORT
             </div>
-            <OmakaseExportModal editTimeranges={editTimeranges} flows={flows} onModalToggle={setOmakaseModalVisible} isModalOpen={omakaseModalVisible}/>
+            <OmakaseExportModal
+              editTimeranges={editTimeranges}
+              flows={flows}
+              onModalToggle={setOmakaseModalVisible}
+              isModalOpen={omakaseModalVisible}
+            />
           </>
         )}
     </div>
