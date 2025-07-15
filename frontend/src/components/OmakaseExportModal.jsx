@@ -144,7 +144,9 @@ export default function OmakaseExportModal({ editTimeranges, flows, onModalToggl
 
           {audioFlows.length > 0 && <FormField label="Audio Flows">
             <Multiselect
-              selectedOptions={audioFlows.map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
+              selectedOptions={audioFlows
+                .filter(flow => formData.flows[flow.id])
+                .map((flow) => ({ label: flow.description ?? "", value: flow.id }))}
               onChange={({ detail }) => {
                 const selectedIds = detail.selectedOptions.map(option => option.value);
                 const newFlows = {};
