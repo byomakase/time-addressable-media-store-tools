@@ -401,6 +401,7 @@ Resources:
           POWERTOOLS_METRICS_NAMESPACE: TAMS-Tools
           INGEST_QUEUE_URL: !Ref SegmentIngestQueueUrl
           FFMPEG_BUCKET: !Ref FFmpegBucket
+          TAMS_MEDIA_BUCKET: !Ref TamsMediaBucket
       Policies:
         - Version: "2012-10-17"
           Statement:

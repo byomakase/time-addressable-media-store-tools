@@ -2,7 +2,6 @@ import concurrent.futures
 import json
 import math
 import os
-import re
 import subprocess  # nosec B404 - subprocess call is safe as command input is controlled
 import uuid
 
@@ -27,19 +26,7 @@ s3 = boto3.client("s3")
 sqs = boto3.client("sqs")
 INGEST_QUEUE_URL = os.environ["INGEST_QUEUE_URL"]
 FFMPEG_BUCKET = os.environ["FFMPEG_BUCKET"]
-
-
-@tracer.capture_method(capture_response=False)
-def get_s3_bucket_from_url(get_urls):
-    unsigned_urls = [
-        get_url["url"] for get_url in get_urls if ":s3:" in get_url["label"]
-    ]
-    if not unsigned_urls:
-        raise ValueError("Could not find unsigned S3 url")
-    match = re.match(r"https:\/\/(?P<bucket>.*)\.s3.*", unsigned_urls[0])
-    if not match:
-        raise ValueError("Could not find bucket in unsigned S3 url")
-    return match.group("bucket")
+TAMS_MEDIA_BUCKET = os.environ["TAMS_MEDIA_BUCKET"]
 
 
 @tracer.capture_method(capture_response=False)
@@ -184,9 +171,7 @@ def download_objects_parallel(s3_objects):
 def process_message(message):
     for segment in message.get("segments", []):
         logger.info(f'Processing Object Id: {segment["object_id"]}...')
-        get_segment = s3.get_object(
-            Bucket=get_s3_bucket_from_url(segment["get_urls"]), Key=segment["object_id"]
-        )
+        get_segment = s3.get_object(Bucket=TAMS_MEDIA_BUCKET, Key=segment["object_id"])
         output = execute_ffmpeg_memory(
             get_segment["Body"].read(),
             message["ffmpeg"]["command"],
