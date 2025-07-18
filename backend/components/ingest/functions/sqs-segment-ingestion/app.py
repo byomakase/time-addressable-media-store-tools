@@ -162,7 +162,7 @@ def record_handler(record: SQSRecord) -> None:
     media_object = upload_file(flow_id, file_data)
     if media_object is None:
         raise ValueError(f"Unable to upload file to flow {flow_id}")
-    if media_object["put_url"]["content-type"].split("/")[0] == "image":
+    if media_object["put_url"]["content-type"].split("/")[0] == "image" and "_" in message["timerange"]:
         message["timerange"] = f'{message["timerange"].split("_")[0]}]'
     post_result = post_segment(flow_id, media_object["object_id"], message["timerange"])
     if not post_result:
