@@ -207,6 +207,58 @@ Resources:
             Resource:
               - !GetAtt OmakaseExportEventBus.Arn
 
+  EditByReferenceFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: Resource level permissions not possible
+          - id: W89
+            reason: VPC not required
+          - id: W92
+            reason: ReservedConcurrentExecutions not required
+    Properties:
+      CodeUri: functions/edit-by-reference/
+      Layers:
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+        - !Ref OpenIdAuthLayer
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: tams-tools
+          POWERTOOLS_METRICS_NAMESPACE: TAMS-Tools
+          TAMS_ENDPOINT: !ImportValue
+            Fn::Sub: ${ApiStackName}-ApiEndpoint
+          TOKEN_URL: !ImportValue
+            Fn::Sub: ${ApiStackName}-TokenUrl
+          USER_POOL_ID: !ImportValue
+            Fn::Sub: ${ApiStackName}-UserPoolId
+          CLIENT_ID: !ImportValue
+            Fn::Sub: ${ApiStackName}-UserPoolClientId
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:DescribeUserPoolClient
+              Resource: !Sub
+                - arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+                - UserPoolId: !ImportValue
+                    Fn::Sub: ${ApiStackName}-UserPoolId
+      Events:
+        EBRule:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref OmakaseExportEventBus
+            Pattern:
+              source:
+                - TAMS_UX
+              detail-type:
+                - TAMS_PROCESSING_REQUEST
+              detail:
+                operation:
+                  - FLOW_CREATION
+
   HlsApiStack:
     Type: AWS::CloudFormation::Stack
     Properties:
