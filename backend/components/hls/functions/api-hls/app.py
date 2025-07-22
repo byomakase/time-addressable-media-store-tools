@@ -373,7 +373,7 @@ def get_segments_hls(flowId: str):
             presigned_urls = [
                 get_url["url"]
                 for get_url in segment["get_urls"]
-                if "s3.presigned" in get_url["label"]
+                if get_url.get("presigned", False)
             ]
             segment_duration = TimeRange.from_str(
                 segment["timerange"]

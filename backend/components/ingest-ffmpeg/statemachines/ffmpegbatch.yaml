@@ -12,26 +12,6 @@ States:
         {% $states.input.ffmpeg %}
       outputFlow: >-
         {% $states.input.outputFlow %}
-    Next: GetStoreName
-  GetStoreName:
-    Type: Task
-    Resource: arn:aws:states:::http:invoke
-    Arguments:
-      Method: GET
-      InvocationConfig:
-        ConnectionArn: ${ConnectionArn}
-      ApiEndpoint: ${TamsEndpoint}/service
-    Assign:
-      storeName: >-
-        {% $states.result.ResponseBody.name ? $states.result.ResponseBody.name : 'tams' %}
-    Retry:
-      - ErrorEquals:
-          - Events.ConnectionResource.InvalidConnectionState
-          - Events.ConnectionResource.AuthInProgress
-          - Events.ConnectionResource.ConcurrentModification
-        IntervalSeconds: 1
-        BackoffRate: 2
-        MaxAttempts: 3
     Next: GetSegments
   GetSegments:
     Type: Task
@@ -44,8 +24,7 @@ States:
         {% '${TamsEndpoint}/flows/' & $inputFlow & '/segments' %}
       QueryParameters:
         limit: 10
-        accept_get_urls: >-
-          {% 'aws.${AwsRegion}:s3:' & $storeName %}
+        presigned: False
         timerange: >-
           {% $sourceTimerange %}
     Assign:
@@ -129,8 +108,7 @@ States:
         {% '${TamsEndpoint}/flows/' & $inputFlow & '/segments' %}
       QueryParameters:
         limit: 10
-        accept_get_urls: >-
-          {% 'aws.${AwsRegion}:s3:' & $storeName %}
+        presigned: False
         timerange: >-
           {% $sourceTimerange %}
         page: >-
