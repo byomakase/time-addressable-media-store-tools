@@ -60,7 +60,7 @@ def get_file(source: str, byterange: str | None) -> bytes:
 
 
 @tracer.capture_method(capture_response=False)
-def upload_file(flow_id: str, data: bytes) -> dict:
+def upload_file(flow_id: str, data: bytes, object_id: str | None) -> dict:
     """Uploads a file to the TAMS API"""
     logger.info("Requesting pre-signed PUT URL...")
     get_url = requests.post(
@@ -69,7 +69,7 @@ def upload_file(flow_id: str, data: bytes) -> dict:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {creds.token()}",
         },
-        data=json.dumps({"limit": 1}),
+        data=json.dumps({"object_ids": [object_id]} if object_id else {"limit": 1}),
         timeout=30,
     )
     try:
@@ -156,13 +156,16 @@ def record_handler(record: SQSRecord) -> None:
             name="base_uri", value="/".join(message["uri"].split("/")[:-1])
         )
     flow_id = message["flowId"]
-    file_data = get_file(message["uri"], message.get("byterange", None))
+    file_data = get_file(message["uri"], message.get("byterange"))
     if not file_data:
         raise ValueError(f'Unable to read source file {message["uri"]}')
-    media_object = upload_file(flow_id, file_data)
+    media_object = upload_file(flow_id, file_data, message.get("objectId"))
     if media_object is None:
         raise ValueError(f"Unable to upload file to flow {flow_id}")
-    if media_object["put_url"]["content-type"].split("/")[0] == "image" and "_" in message["timerange"]:
+    if (
+        media_object["put_url"]["content-type"].split("/")[0] == "image"
+        and "_" in message["timerange"]
+    ):
         message["timerange"] = f'{message["timerange"].split("_")[0]}]'
     post_result = post_segment(flow_id, media_object["object_id"], message["timerange"])
     if not post_result:
