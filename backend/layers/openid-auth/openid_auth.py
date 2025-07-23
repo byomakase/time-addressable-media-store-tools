@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-
 import boto3
 import requests
 
@@ -8,15 +7,16 @@ class Credentials:
     def __init__(
         self,
         token_url: str,
-        user_pool_id: str,
         client_id: str,
         scopes: list[str],
+        user_pool_id: str = None,
+        client_secret: str = None,
     ) -> None:
         self._token_url = token_url
         self._user_pool_id = user_pool_id
         self._client_id = client_id
         self._scope = " ".join(scopes)
-        self._client_secret = None
+        self._client_secret = client_secret
         self._access_token = None
         self._expires_at = None
 
@@ -33,6 +33,9 @@ class Credentials:
 
     def _get_client_secret(self):
         """Get client secret from Cognito"""
+        if self._user_pool_id is None:
+            raise ValueError("Either client_secret or user_pool_id must be provided")
+
         client = boto3.client("cognito-idp")
         user_pool_client = client.describe_user_pool_client(
             UserPoolId=self._user_pool_id, ClientId=self._client_id
