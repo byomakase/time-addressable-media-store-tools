@@ -123,6 +123,17 @@ const Layout = () => {
                     ],
                   }
                 : {},
+              {
+                type: "section",
+                text: "MediaConvert",
+                items: [
+                  {
+                    type: "link",
+                    text: "Jobs",
+                    href: "/mediaconvert-jobs",
+                  },
+                ],
+              },
             ]}
           />
         }

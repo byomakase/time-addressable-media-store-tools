@@ -24,6 +24,7 @@ import FfmpegExports from "@/views/FfmpegExports";
 import FfmpegRules from "@/views/FfmpegRules";
 import FfmpegJobs from "@/views/FfmpegJobs";
 import MediaConvertIngestion from "@/views/MediaConvertIngestion";
+import MediaConvertJobs from "@/views/MediaConvertJobs";
 import MediaLiveIngestion from "@/views/MediaLiveIngestion";
 import React from "react";
 import Source from "@/views/Source";
@@ -90,6 +91,9 @@ const App = () => {
               <Route path="ffmpeg-jobs" element={<FfmpegJobs />} />
             </>
           )}
+          <Route path="mediaconvert-jobs">
+            <Route index element={<MediaConvertJobs />} />
+          </Route>
         </Route>
       </Routes>
     </HashRouter>

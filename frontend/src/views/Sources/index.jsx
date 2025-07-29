@@ -1,5 +1,7 @@
+import { useState } from "react";
 import {
   Box,
+  ButtonDropdown,
   CollectionPreferences,
   CopyToClipboard,
   Header,
@@ -15,6 +17,7 @@ import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useSources } from "@/hooks/useSources";
 import usePreferencesStore from "@/stores/usePreferencesStore";
 import { PAGE_SIZE_PREFERENCE } from "@/constants";
+import CreateExportModal from "./components/CreateExportModal";
 
 const columnDefinitions = [
   {
@@ -118,6 +121,8 @@ const Sources = () => {
   const setPreferences = usePreferencesStore((state) => state.setSourcesPreferences);
   const showHierarchy = usePreferencesStore((state) => state.sourcesShowHierarchy);
   const setShowHierarchy = usePreferencesStore((state) => state.setSourcesShowHierarchy);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [actionId, setActionId] = useState("");
   const { sources, isLoading } = useSources();
   const { items, collectionProps, filterProps, paginationProps } =
     useCollection(isLoading ? [] : sources, {
@@ -147,44 +152,84 @@ const Sources = () => {
       },
       selection: {},
     });
+  const { selectedItems } = collectionProps;
+
+  const handleOnClick = ({ detail }) => {
+    setActionId(detail.id);
+    setModalVisible(true);
+  };
 
   return (
-    <Table
-      header={
-        <Header
-          actions={
-            <SpaceBetween size="xs" direction="horizontal" alignItems="center">
-              <Toggle
-                onChange={({ detail }) => setShowHierarchy(detail.checked)}
-                checked={showHierarchy}
+    <>
+      <Table
+        header={
+          <Header
+            actions={
+              <SpaceBetween
+                size="xs"
+                direction="horizontal"
+                alignItems="center"
               >
-                Hierarchical View
-              </Toggle>
-            </SpaceBetween>
-          }
-        >
-          Sources
-        </Header>
+                <ButtonDropdown
+                  onItemClick={handleOnClick}
+                  disabled={selectedItems.length === 0}
+                  expandableGroups
+                  items={[
+                    {
+                      text: "Create MediaConvert Job",
+                      id: "create-export",
+                      disabled: selectedItems.length !== 1,
+                    },
+                  ]}
+                >
+                  Actions
+                </ButtonDropdown>
+                <Toggle
+                  onChange={({ detail }) => setShowHierarchy(detail.checked)}
+                  checked={showHierarchy}
+                >
+                  Hierarchical View
+                </Toggle>
+              </SpaceBetween>
+            }
+          >
+            Sources
+          </Header>
+        }
+        {...collectionProps}
+        selectionType="single"
+        variant="borderless"
+        loadingText="Loading resources"
+        loading={isLoading}
+        trackBy="id"
+        columnDefinitions={columnDefinitions}
+        columnDisplay={preferences.contentDisplay}
+        contentDensity="compact"
+        items={items}
+        pagination={<Pagination {...paginationProps} />}
+        filter={<TextFilter {...filterProps} />}
+        preferences={
+          <CollectionPreferences
+            {...collectionPreferencesProps}
+            preferences={preferences}
+            onConfirm={({ detail }) => setPreferences(detail)}
+          />
+        }
+      />
+      {
+        {
+          "create-export": (
+            <CreateExportModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedSourceId={
+                selectedItems.length > 0 ? selectedItems[0].id : ""
+              }
+            />
+          ),
+        }[actionId]
       }
-      {...collectionProps}
-      variant="borderless"
-      loadingText="Loading resources"
-      loading={isLoading}
-      trackBy="id"
-      columnDefinitions={columnDefinitions}
-      columnDisplay={preferences.contentDisplay}
-      contentDensity="compact"
-      items={items}
-      pagination={<Pagination {...paginationProps} />}
-      filter={<TextFilter {...filterProps} />}
-      preferences={
-        <CollectionPreferences
-          {...collectionPreferencesProps}
-          preferences={preferences}
-          onConfirm={({ detail }) => setPreferences(detail)}
-        />
-      }
-    />
+    </>
   );
 };
 
