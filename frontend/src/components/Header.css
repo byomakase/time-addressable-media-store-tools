@@ -1,0 +1,6 @@
+[class*="awsui_top-navigation"] [class*="awsui_title"] {
+  color: var(--title-color) !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}

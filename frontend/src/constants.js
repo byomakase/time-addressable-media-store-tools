@@ -1,5 +1,7 @@
 /************* ENVIRONMENT VARIABLES **************/
 export const APP_TITLE = import.meta.env.VITE_APP_TITLE;
+export const APP_TITLE_LOGO = import.meta.env.VITE_APP_TITLE_LOGO;
+export const APP_TITLE_COLOUR = import.meta.env.VITE_APP_TITLE_COLOUR;
 export const AWS_REGION = import.meta.env.VITE_APP_AWS_REGION;
 export const AWS_USER_POOL_ID = import.meta.env.VITE_APP_AWS_USER_POOL_ID;
 export const AWS_USER_POOL_CLIENT_WEB_ID = import.meta.env.VITE_APP_AWS_USER_POOL_CLIENT_WEB_ID;

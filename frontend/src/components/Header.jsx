@@ -1,14 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TopNavigation } from "@cloudscape-design/components";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { Mode, applyMode } from "@cloudscape-design/global-styles";
-import { APP_TITLE } from "@/constants";
+import { APP_TITLE, APP_TITLE_LOGO, APP_TITLE_COLOUR } from "@/constants";
+import "./Header.css";
 
 const Header = () => {
   const [mode, setMode] = useState(Mode.Dark);
   const { user, signOut } = useAuthenticator((context) => [context.user]);
 
   applyMode(mode);
+
+  useEffect(() => {
+    if (APP_TITLE_COLOUR) {
+      document.documentElement.style.setProperty(
+        "--title-color",
+        APP_TITLE_COLOUR
+      );
+    }
+  }, []);
 
   const handleDropdownClick = ({ detail }) => {
     if (detail.id === "signout") {
@@ -22,11 +32,14 @@ const Header = () => {
     }
   };
 
+  console.log(APP_TITLE ?? "TAMS Tools")
+
   return (
     <TopNavigation
       identity={{
         href: "/",
         title: APP_TITLE ?? "TAMS Tools",
+        ...(APP_TITLE_LOGO && { logo: { src: APP_TITLE_LOGO } }),
       }}
       utilities={[
         {
