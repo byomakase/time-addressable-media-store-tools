@@ -1,287 +1,153 @@
-import { useState } from "react";
-import {
-  Modal,
-  FormField,
-  Select,
-  Input,
-  Multiselect,
-  ExpandableSection,
-  SpaceBetween,
-  Button,
-  Box,
-} from "@cloudscape-design/components";
+import { useState, useMemo, useEffect } from "react";
+import { Modal, SpaceBetween } from "@cloudscape-design/components";
 import useAlertsStore from "@/stores/useAlertsStore";
+import { useExportOperations } from "@/hooks/useExportOperations";
+import { useExportForm } from "@/hooks/useExportForm";
+import { useMediaConvertJob } from "@/hooks/useMediaConvertJob";
+import { useMediaConvertJobSpec } from "@/hooks/useMediaConvertJobSpec";
 import { executeExport } from "@/utils/executeExport";
-import { getMediaConvertJobSpec } from "@/utils/getMediaConvertJobSpec";
-import { useStartJob } from "@/hooks/useMediaConvert";
+import validateJson from "@/utils/validateJson";
+import FlowSelector from "./FlowSelector";
+import OperationSelector from "./OperationSelector";
+import MediaConvertExportForm from "./MediaConvertExportForm";
+import DynamicForm from "./DynamicForm";
+import ExportModalFooter from "./ExportModalFooter";
 
-export default function OmakaseExportModal({
+const OmakaseExportModal = ({
   sourceId,
   editTimeranges,
   flows,
   onModalToggle,
   isModalOpen,
-}) {
-  const [formData, setFormData] = useState({
-    operation: "Segment Concatenation",
-    format: "TS",
-    bucket: "",
-    path: "",
-    filename: "",
-    label: "",
-    flows: flows
-      .filter((flow) => flow.format === "urn:x-nmos:format:audio")
-      .reduce((acc, flow) => {
-        acc[flow.id] = true;
-        return acc;
-      }, {}),
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [showAdvancedContent, setShowAdvancedContent] = useState(false);
-  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
-  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
-  const { start, isStarting } = useStartJob();
+}) => {
+  const handleDismiss = () => {
+    onModalToggle(false);
+    resetForm();
+    resetJobSpec();
+  };
+  const { jobSpec, setJobSpec, resetJobSpec } = useMediaConvertJobSpec(sourceId);
+  const { createJob, isStarting } = useMediaConvertJob(handleDismiss);
+  const { operations, getOperationSchema } = useExportOperations();
+  const {
+    formData,
+    setFormData,
+    formSchema,
+    handleOperationChange,
+    resetForm,
+    isFormValid,
+  } = useExportForm(getOperationSchema);
 
-  const operations = [
-    "Segment Concatenation",
-    "Flow Creation",
-    "MediaConvert Export",
-  ];
-  const formats = [
-    { label: "TS", value: "M2TS" },
-    { label: "MP4", value: "MP4" },
-  ];
-  const isExportButtonDisabled =
-    formData.operation === "Flow Creation" && formData.label === "";
-  const audioFlows = flows.filter(
-    (flow) => flow.format === "urn:x-nmos:format:audio"
+  const flowOptions = useMemo(
+    () =>
+      flows?.map((flow) => ({
+        label: flow.description ?? flow.label,
+        value: flow.id,
+        tags: [flow.format],
+      })) ?? [],
+    [flows]
   );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const [selectedFlows, setSelectedFlows] = useState(flowOptions);
+  const [isLoading, setIsLoading] = useState(false);
+  const addAlertItem = useAlertsStore((state) => state.addAlertItem);
+  const delAlertItem = useAlertsStore((state) => state.delAlertItem);
+
+  useEffect(() => {
+    setSelectedFlows(flowOptions);
+  }, [flowOptions]);
+
+  const handleSubmit = async () => {
     setIsLoading(true);
+    const exportResult = await executeExport(
+      formData,
+      editTimeranges,
+      selectedFlows.map((flow) => flow.value),
+      sourceId
+    );
     const id = crypto.randomUUID();
-    if (formData.operation === "MediaConvert Export") {
-      start(
-        {
-          spec: JSON.stringify(
-            getMediaConvertJobSpec(
-              sourceId,
-              `${formData.format.toLowerCase()}H264AAC`
-            )
-          ),
-          sourceId: sourceId,
-          timeranges: editTimeranges.join(","),
-        },
-        {
-          onSuccess: (jobId) => {
-            addAlertItem({
-              type: "success",
-              dismissible: true,
-              dismissLabel: "Dismiss message",
-              content: `MediaConvert Job: ${jobId} is being submitted...`,
-              id: id,
-              onDismiss: () => delAlertItem(id),
-            });
-            onModalToggle(false);
-            setIsLoading(false);
-          },
-          onError: (err) => {
-            addAlertItem({
-              type: "error",
-              dismissible: true,
-              dismissLabel: "Dismiss message",
-              content: `MediaConvert Job Error: ${err.message}`,
-              id: id,
-              onDismiss: () => delAlertItem(id),
-            });
-            onModalToggle(false);
-            setIsLoading(false);
-          },
-        }
-      );
-    } else {
-      try {
-        await executeExport(formData, editTimeranges, flows, sourceId);
-        addAlertItem({
-          id,
-          type: "success",
-          content: "Export successful",
-          dismissible: true,
-          dismissLabel: "Dismiss message",
-          onDismiss: () => delAlertItem(id),
-        });
-      } catch (error) {
-        addAlertItem({
-          id,
-          type: "error",
-          content: "Export failed",
-          dismissible: true,
-          dismissLabel: "Dismiss message",
-          onDismiss: () => delAlertItem(id),
-        });
-      } finally {
-        onModalToggle(false);
-        setIsLoading(false);
-      }
-    }
+    addAlertItem({
+      id,
+      type: exportResult,
+      content: `Export ${exportResult === "success" ? "successful" : "failed"}`,
+      dismissible: true,
+      dismissLabel: "Dismiss message",
+      onDismiss: () => delAlertItem(id),
+    });
+    onModalToggle(false);
+    resetForm();
+    setIsLoading(false);
   };
 
-  const handleOperationChange = (e) => {
-    setFormData((prevFormData) => {
-      const newOperation = e.target.value;
-      if (
-        prevFormData.operation === "Segment Concatenation" &&
-        newOperation !== "Segment Concatenation"
-      ) {
-        return {
-          ...prevFormData,
-          operation: newOperation,
-          filename: "",
-          bucket: "",
-          path: "",
-        };
-      }
-      return { ...prevFormData, operation: newOperation };
-    });
+  const isExportButtonDisabled = useMemo(() => {
+    return selectedFlows.length === 0 || !isFormValid;
+  }, [selectedFlows.length, isFormValid]);
+
+  const handleCreateJob = () => {
+    createJob({ jobSpec, sourceId, timeranges: editTimeranges });
   };
 
   return (
-    <>
-      <Modal
-        onDismiss={() => onModalToggle(false)}
-        visible={isModalOpen}
-        header="Export"
-      >
-        <SpaceBetween direction="vertical" size="l">
-          <FormField label="Operation">
-            <Select
-              selectedOption={{
-                label: formData.operation,
-                value: formData.operation,
-              }}
-              onChange={({ detail }) => {
-                const e = { target: { value: detail.selectedOption.value } };
-                handleOperationChange(e);
-              }}
-              options={operations.map((op) => ({ label: op, value: op }))}
-            />
-          </FormField>
+    <Modal
+      onDismiss={handleDismiss}
+      visible={isModalOpen}
+      header="Export"
+      footer={
+        formSchema ? (
+          <ExportModalFooter
+            onCancel={handleDismiss}
+            onSubmit={handleSubmit}
+            submitText="Export"
+            submitDisabled={isExportButtonDisabled}
+            submitLoading={isLoading}
+            cancelDisabled={isStarting}
+            cancelLoading={isStarting || isLoading}
+          />
+        ) : (
+          <ExportModalFooter
+            onCancel={handleDismiss}
+            onSubmit={handleCreateJob}
+            submitText="Export"
+            submitDisabled={
+              isStarting || !editTimeranges || !validateJson(jobSpec).isValid
+            }
+            submitLoading={isStarting}
+            cancelDisabled={isStarting}
+          />
+        )
+      }
+    >
+      <SpaceBetween direction="vertical" size="xs">
+        <FlowSelector
+          flows={flows}
+          selectedFlows={selectedFlows}
+          onChange={setSelectedFlows}
+        />
 
-          {(formData.operation === "Segment Concatenation" ||
-            formData.operation === "MediaConvert Export") && (
-            <FormField label="Format">
-              <Select
-                selectedOption={formats.find(
-                  (format) => format.value == formData.format
-                )}
-                onChange={({ detail }) =>
-                  setFormData((prevFormData) => ({
-                    ...prevFormData,
-                    format: detail.selectedOption.value,
-                  }))
-                }
-                options={formats}
-              />
-            </FormField>
-          )}
+        <OperationSelector
+          operations={operations}
+          selectedOperation={formData.operation}
+          onChange={handleOperationChange}
+        />
 
-          {formData.operation === "Flow Creation" && (
-            <FormField label="Label">
-              <Input
-                value={formData.label}
-                onChange={({ detail }) =>
-                  setFormData({ ...formData, label: detail.value })
-                }
-                placeholder="Label"
-              />
-            </FormField>
-          )}
+        {formSchema && (
+          <DynamicForm
+            schema={formSchema}
+            formData={formData}
+            onChange={({ formData }) => setFormData(formData)}
+          />
+        )}
 
-          {formData.operation !== "MediaConvert Export" &&
-            audioFlows.length > 0 && (
-              <FormField label="Audio Flows">
-                <Multiselect
-                  inlineTokens
-                  selectedOptions={audioFlows
-                    .filter((flow) => formData.flows[flow.id])
-                    .map((flow) => ({
-                      label: flow.description ?? "",
-                      value: flow.id,
-                    }))}
-                  onChange={({ detail }) => {
-                    const selectedIds = detail.selectedOptions.map(
-                      (option) => option.value
-                    );
-                    const newFlows = {};
-                    audioFlows.forEach((flow) => {
-                      newFlows[flow.id] = selectedIds.includes(flow.id);
-                    });
-                    setFormData((prev) => ({
-                      ...prev,
-                      flows: { ...prev.flows, ...newFlows },
-                    }));
-                  }}
-                  options={audioFlows.map((flow) => ({
-                    label: flow.description ?? "",
-                    value: flow.id,
-                  }))}
-                  placeholder="Select audio flows"
-                />
-              </FormField>
-            )}
-
-          {formData.operation === "Segment Concatenation" && (
-            <ExpandableSection
-              headerText="Advanced"
-              variant="footer"
-              expanded={showAdvancedContent}
-              onChange={({ detail }) => setShowAdvancedContent(detail.expanded)}
-            >
-              <SpaceBetween direction="vertical" size="m">
-                <FormField label="Bucket">
-                  <Input
-                    value={formData.bucket}
-                    onChange={({ detail }) =>
-                      setFormData({ ...formData, bucket: detail.value })
-                    }
-                    placeholder="Bucket"
-                  />
-                </FormField>
-                <FormField label="Path">
-                  <Input
-                    value={formData.path}
-                    onChange={({ detail }) =>
-                      setFormData({ ...formData, path: detail.value })
-                    }
-                    placeholder="Path"
-                  />
-                </FormField>
-                <FormField label="Filename">
-                  <Input
-                    value={formData.filename}
-                    onChange={({ detail }) =>
-                      setFormData({ ...formData, filename: detail.value })
-                    }
-                    placeholder="Filename"
-                  />
-                </FormField>
-              </SpaceBetween>
-            </ExpandableSection>
-          )}
-
-          <Box float="right">
-            <Button
-              variant="primary"
-              disabled={isExportButtonDisabled}
-              onClick={handleSubmit}
-              loading={isLoading || isStarting}
-            >
-              Export
-            </Button>
-          </Box>
-        </SpaceBetween>
-      </Modal>
-    </>
+        {formData.operation === "MEDIACONVERT_EXPORT" && (
+          <MediaConvertExportForm
+            timeranges={editTimeranges}
+            jobSpec={jobSpec}
+            onJobSpecChange={setJobSpec}
+            readOnly={true}
+          />
+        )}
+      </SpaceBetween>
+    </Modal>
   );
-}
+};
+
+export default OmakaseExportModal;
