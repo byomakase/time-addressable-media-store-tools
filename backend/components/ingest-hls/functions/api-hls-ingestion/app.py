@@ -45,9 +45,8 @@ def manifest_exists(uri):
         )
         return True
     except ClientError as ex:
-        if ex.response["Error"]["Code"] == "404":
-            return False
-        raise ex
+        logger.error(ex)
+        return False
 
 
 @app.get("/job-ingestion")
