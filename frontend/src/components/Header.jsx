@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { TopNavigation } from "@cloudscape-design/components";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { Mode, applyMode } from "@cloudscape-design/global-styles";
-import { APP_TITLE, APP_TITLE_LOGO, APP_TITLE_COLOUR } from "@/constants";
+import { APP_TITLE, APP_TITLE_LOGO } from "@/constants";
 import "./Header.css";
 
 const Header = () => {
@@ -10,13 +10,6 @@ const Header = () => {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
 
   applyMode(mode);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--title-color",
-      APP_TITLE_COLOUR
-    );
-  }, []);
 
   const handleDropdownClick = ({ detail }) => {
     if (detail.id === "signout") {
