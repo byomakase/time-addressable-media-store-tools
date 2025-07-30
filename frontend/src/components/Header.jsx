@@ -12,12 +12,10 @@ const Header = () => {
   applyMode(mode);
 
   useEffect(() => {
-    if (APP_TITLE_COLOUR) {
-      document.documentElement.style.setProperty(
-        "--title-color",
-        APP_TITLE_COLOUR
-      );
-    }
+    document.documentElement.style.setProperty(
+      "--title-color",
+      APP_TITLE_COLOUR
+    );
   }, []);
 
   const handleDropdownClick = ({ detail }) => {
@@ -32,14 +30,12 @@ const Header = () => {
     }
   };
 
-  console.log(APP_TITLE ?? "TAMS Tools")
-
   return (
     <TopNavigation
       identity={{
         href: "/",
         title: APP_TITLE ?? "TAMS Tools",
-        ...(APP_TITLE_LOGO && { logo: { src: APP_TITLE_LOGO } }),
+        logo: { src: APP_TITLE_LOGO ?? "/aws.svg" },
       }}
       utilities={[
         {
