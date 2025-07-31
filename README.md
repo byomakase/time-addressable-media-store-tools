@@ -1,8 +1,8 @@
 # Time-addressable Media Store Tools
 
-This solution contains a Web UI and associated tools to be used to help adoption and understanding of the AWS implementation of the [BBC TAMS API](https://github.com/bbc/tams). AWS have created an open source sample implementation of that API [here](https://github.com/awslabs/time-addressable-media-store).  This solutions is designed to be used with that implementation.
+This solution contains a Web UI and associated tools to be used to help adoption and understanding of the AWS implementation of the [BBC TAMS API](https://github.com/bbc/tams). AWS have created an open source sample implementation of that API [here](https://github.com/awslabs/time-addressable-media-store).  This solution is designed to be used with that implementation.
 
-**NOTE: This solution is not designed to be used in a Production environment. It is designed for dev use cases where a tools is required to help visualise the contents of a TAMS store.**
+**NOTE: This solution is not designed to be used in a Production environment. It is designed for dev use cases where a tool is required to help visualise the contents of a TAMS store.**
 
 ## Pre-requisites
 
@@ -34,17 +34,18 @@ The first command will build the source of your application. The second command 
 
 - **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
 - **AWS Region**: The AWS region you want to deploy your app to.
-- **ApiStackName**: Supply the name of the CloudFormation stack used to the deploy the TAMS API.
+- **ApiStackName**: Supply the name of the CloudFormation stack used to deploy the TAMS API.
 - **DeployHlsApi**: Defines whether to deploy the HLS component. **Leave the default value of `No`.**
 - **DeployIngestHls**: Defines whether to deploy the HLS ingest component. **Leave the default value of `No`.**
 - **DeployIngestFfmpeg**: Defines whether to deploy the FFMPEG based transcode component. **Leave the default value of `No`.**
+- **DeployReplication**: Defines whether to deploy the replication component. **Leave the default value of `No`.**
 - **Confirm changes before deploy**: If set to yes, any change sets will be shown to you before execution for manual review. If set to no, the AWS SAM CLI will automatically deploy application changes.
 - **Allow SAM CLI IAM role creation**: Many AWS SAM templates, including this example, create AWS IAM roles required for the AWS Lambda function(s) included to access AWS services. By default, these are scoped down to minimum required permissions. To deploy an AWS CloudFormation stack which creates or modifies IAM roles, the `CAPABILITY_IAM` value for `capabilities` must be provided. If permission isn't provided through this prompt, to deploy this example you must explicitly pass `--capabilities CAPABILITY_IAM` to the `sam deploy` command.
 - **Save arguments to samconfig.toml**: If set to yes, your choices will be saved to a configuration file inside the project, so that in the future you can just re-run `sam deploy` without parameters to deploy changes to your application.
 
 The deployment will only take a short time as with all the components set to No there is no Infrastructure to deploy.
 
-## Configure and build the Web Ui frontend
+## Configure and build the Web UI frontend
 
 ```bash
 cd ../frontend
@@ -52,14 +53,27 @@ npm ci
 cp .env.template .env.local
 ```
 
-Open the newly created `env.local` file in your preferred text editor and set the values for the non-commented out variables, leave the commented out lines for now. All the values for the variables specified in this file are provided as Outputs on the Cloudformation stack that resulted from the deployment of the infrastructure with one exception the `OMAKASE_EXPORT_EVENT_BUS` comes from the deployment of this tools stack instead.
+Open the newly created `env.local` file in your preferred text editor and set the values for the non-commented out variables, leave the commented out lines for now. The values for these variables are provided as outputs from two different CloudFormation stacks:
 
-- VITE_APP_AWS_REGION
-- VITE_APP_AWS_USER_POOL_ID
-- VITE_APP_AWS_USER_POOL_CLIENT_WEB_ID
-- VITE_APP_AWS_IDENTITY_POOL_ID
-- VITE_APP_AWS_API_ENDPOINT
-- VITE_APP_OMAKASE_EXPORT_EVENT_BUS
+1. **TAMS API stack** - The CloudFormation stack from the separate [TAMS API project](https://github.com/awslabs/time-addressable-media-store) that you deployed as a prerequisite
+2. **TAMS Tools stack** - The CloudFormation stack created when you deployed this tools project
+
+The variable names in the template file show the corresponding CloudFormation output names between `<` and `>` brackets as placeholders (for example, `<UserPoolId>` corresponds to the `UserPoolId` output from the TAMS API stack).
+
+### Required Environment Variables
+
+The following variables must be configured for basic functionality. Values come from outputs of two different CloudFormation stacks:
+
+- **VITE_APP_AWS_REGION**: The AWS region where your TAMS API is deployed
+- **VITE_APP_AWS_USER_POOL_ID**: From **TAMS API stack** output `UserPoolId`
+- **VITE_APP_AWS_USER_POOL_CLIENT_WEB_ID**: From **TAMS API stack** output `UserPoolClientWebId`
+- **VITE_APP_AWS_IDENTITY_POOL_ID**: From **TAMS API stack** output `IdentityPoolId`
+- **VITE_APP_AWS_API_ENDPOINT**: From **TAMS API stack** output `ApiEndpoint`
+- **VITE_APP_OMAKASE_EXPORT_EVENT_BUS**: From **TAMS Tools stack** output `OmakaseExportEventBus`
+- **VITE_APP_OMAKASE_EXPORT_EVENT_PARAMETER**: From **TAMS Tools stack** output `OmakaseExportEventParameter`
+- **VITE_APP_TAMS_AUTH_CONNECTION_ARN**: From **TAMS Tools stack** output `TamsAuthConnectionArn`
+- **VITE_APP_AWS_MEDIACONVERT_ROLE_ARN**: From **TAMS Tools stack** output `MediaConvertRoleArn`
+- **VITE_APP_AWS_MEDIACONVERT_BUCKET**: From **TAMS Tools stack** output `MediaConvertBucket`
 
 Once you have set these values save the changes to the file. You now have 2 choices:
 
@@ -83,23 +97,90 @@ Then take the contents of the `dist` subfolder and place this on the web server 
 
 ## Usage
 
-In the initial state the Web App will just have a simple interface that allows you to browse and view the basic data held in your TAMS store. 4 optional components can be deployed to the infrastructure to add functionality to this solution. The deployment of these components is expected to be done from the AWS Cloudformation Console. Changes should therefore be made by updating the stack parameters for the CloudFormation Stack created for the infrastructure.
+In the initial state the Web App will have a simple interface. This allows you to browse and view the basic data held in your TAMS store. It also includes MediaConvert job management and enhanced export capabilities.
+
+Four optional components can be deployed to the infrastructure to add additional functionality. The deployment of these components is expected to be done from the AWS CloudFormation Console. Changes should be made by updating the stack parameters for the CloudFormation Stack created for the infrastructure.
 
 **NOTE: The Web UI is authenticated using the same Cognito User Pool used by the TAMS API. To login you will first need to create a user in Cognito.**
 
-### Optional components
+### Core Features
 
-This solution includes 3 optional components. They can be deployed by performing an update on the Cloudformation Stack and change the relevant Yes/No option.
+The solution now includes several core features available without deploying optional components:
 
-- **DeployHlsApi**
-  - This will deploy a HLS API endpoint to the solution and enable a basic Video player in the WebUI that uses this HLS Api to play TAMS content.
-  - When enabling this option be sure to set the value of `VITE_APP_AWS_HLS_API_ENDPOINT` in the `env.local` file to the Cloudformation output value supplied of `HlsApiEndpoint`
-- **DeployIngestHls**
-  - This will deploy an option in the WebUI to ingest content into TAMS from Elemental Media Live (Channel), Elemental Media Convert (Job) and also an option to ingest from an external HLS manifest URL.
-  - When enabling this option be sure to set the values of `VITE_APP_AWS_CREATE_NEW_FLOW_ARN`, `VITE_APP_AWS_HLS_INGEST_ENDPOINT` & `VITE_APP_AWS_HLS_INGEST_ARN` in the `env.local` file to corresponding Cloudformation output values supplied.
-- **DeployIngestFfmpeg**
-  - This will deploy an option in the WebUI to enable FFmpeg functionality, it supports both Export and Conversion. Conversions can be done as a Rule (event driven) or as a Job (batch mode)..
-  - When enabling this option be sure to set the values of `VITE_APP_AWS_CREATE_NEW_FLOW_ARN`, `VITE_APP_AWS_FFMPEG_ENDPOINT`, `VITE_APP_AWS_FFMPEG_COMMANDS_PARAMETER`, `VITE_APP_AWS_FFMPEG_BATCH_ARN` & `VITE_APP_AWS_FFMPEG_EXPORT_ARN` in the `env.local` file to corresponding Cloudformation output values supplied.
+#### MediaConvert Integration
+
+- **MediaConvert Jobs View**: Browse and monitor AWS Elemental MediaConvert jobs
+- **Job Details**: View detailed information about MediaConvert job status, progress, and configuration
+
+- **Export Integration**: Create MediaConvert jobs directly from TAMS content through the export modal
+
+#### Enhanced Export Modal
+
+The export modal now supports dynamic, configurable export operations. Export operations are defined in a JSON configuration stored in AWS Systems Manager Parameter Store. See the [Export Modal Configuration](#export-modal-configuration) section for details on how to configure custom export operations.
+
+#### Edit-by-Reference Support
+
+The solution includes edit-by-reference functionality that allows for non-destructive editing workflows with TAMS content.
+
+### Optional Components
+
+This solution includes 4 optional components. They can be deployed by performing an update on the CloudFormation Stack and changing the relevant Yes/No option.
+
+#### DeployHlsApi
+
+This will deploy a HLS API endpoint to the solution and enable a basic Video player in the WebUI that uses this HLS API to play TAMS content.
+
+**Required Environment Variable:**
+
+- `VITE_APP_AWS_HLS_API_ENDPOINT` = **TAMS Tools stack** output `HlsApiEndpoint`
+
+#### DeployIngestHls
+
+This will deploy an option in the WebUI to ingest content into TAMS. It supports ingestion from Elemental Media Live (Channel) and Elemental Media Convert (Job). It also provides an option to ingest from an external HLS manifest URL.
+
+**Required Environment Variables:**
+
+- `VITE_APP_AWS_CREATE_NEW_FLOW_ARN` = **TAMS Tools stack** output `CreateNewFlowArn`
+- `VITE_APP_AWS_HLS_INGEST_ENDPOINT` = **TAMS Tools stack** output `HlsIngestEndpoint`
+- `VITE_APP_AWS_HLS_INGEST_ARN` = **TAMS Tools stack** output `HlsIngestArn`
+
+#### DeployIngestFfmpeg
+
+This will deploy an option in the WebUI to enable FFmpeg functionality, it supports both Export and Conversion. Conversions can be done as a Rule (event driven) or as a Job (batch mode).
+
+**Required Environment Variables:**
+
+- `VITE_APP_AWS_CREATE_NEW_FLOW_ARN` = **TAMS Tools stack** output `CreateNewFlowArn`
+- `VITE_APP_AWS_FFMPEG_ENDPOINT` = **TAMS Tools stack** output `FfmpegEndpoint`
+- `VITE_APP_AWS_FFMPEG_COMMANDS_PARAMETER` = **TAMS Tools stack** output `FfmpegCommandsParameter`
+- `VITE_APP_AWS_FFMPEG_BATCH_ARN` = **TAMS Tools stack** output `FfmpegBatchArn`
+- `VITE_APP_AWS_FFMPEG_EXPORT_ARN` = **TAMS Tools stack** output `FfmpegExportArn`
+
+#### DeployReplication
+
+This will deploy replication functionality to the solution, enabling content replication workflows between TAMS stores or external systems.
+
+**Required Environment Variables:**
+
+- `VITE_APP_AWS_REPLICATION_CONNECTIONS_PARAMETER` = **TAMS Tools stack** output `ReplicationConnectionsParameter`
+- `VITE_APP_AWS_REPLICATION_BATCH_ARN` = **TAMS Tools stack** output `ReplicationBatchArn`
+- `VITE_APP_AWS_REPLICATION_CREATE_RULE_ARN` = **TAMS Tools stack** output `ReplicationCreateRuleArn`
+- `VITE_APP_AWS_REPLICATION_DELETE_RULE_ARN` = **TAMS Tools stack** output `ReplicationDeleteRuleArn`
+
+## Export Modal Configuration
+
+The export modal supports dynamic configuration through a JSON schema stored in AWS Systems Manager Parameter Store. This allows you to define custom export operations with configurable form fields, enabling flexible export workflows tailored to your specific requirements.
+
+The export configuration is stored in the SSM parameter specified by the `VITE_APP_OMAKASE_EXPORT_EVENT_PARAMETER` environment variable.
+
+For detailed information about the configuration schema, available field types, and examples, see [OMAKASE_EXPORT_SCHEMA.md](OMAKASE_EXPORT_SCHEMA.md).
+
+## Customisation
+
+The application supports visual customisation to help differentiate between multiple TAMS Tools UI instances:
+
+- **Application Title**: Customise the application title by setting the `VITE_APP_TITLE` environment variable. For example, use `VITE_APP_TITLE="My Custom TAMS Tools"`. If not set, defaults to "TAMS Tools".
+- **Header Logo**: Customise the logo displayed in the header by setting the `VITE_APP_TITLE_LOGO` environment variable with the path to your image file. For example, use `VITE_APP_TITLE_LOGO="/my-logo.png"`. If not set, defaults to "/aws.svg". Place your image files in the `frontend/public/` directory to make them accessible.
 
 ## Cleanup
 
