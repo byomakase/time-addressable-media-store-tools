@@ -31,6 +31,9 @@ Parameters:
   ParentStackName:
     Type: String
 
+  ApiStackName:
+    Type: String
+
 Transform: AWS::Serverless-2016-10-31
 
 Globals:
@@ -93,6 +96,7 @@ Resources:
       Environment:
         Variables:
           QUEUE_URL: !Ref SegmentIngestQueueUrl
+          EVENT_BUS_NAME: !Ref ApiStackName
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -101,6 +105,11 @@ Resources:
                 - sqs:SendMessage
               Resource:
                 - !Ref SegmentIngestQueueArn
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource:
+                - !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/${ApiStackName}
       Events:
         postEvent:
           Type: Api

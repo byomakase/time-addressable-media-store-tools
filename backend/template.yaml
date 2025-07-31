@@ -466,6 +466,7 @@ Resources:
         SegmentIngestQueueUrl: !GetAtt IngestStack.Outputs.SegmentIngestQueueUrl
         SegmentIngestQueueArn: !GetAtt IngestStack.Outputs.SegmentIngestQueueArn
         ParentStackName: !Ref AWS::StackName
+        ApiStackName: !Ref ApiStackName
     Condition: DeployReplication
 
 Outputs:
