@@ -167,13 +167,24 @@ This will deploy replication functionality to the solution, enabling content rep
 - `VITE_APP_AWS_REPLICATION_CREATE_RULE_ARN` = **TAMS Tools stack** output `ReplicationCreateRuleArn`
 - `VITE_APP_AWS_REPLICATION_DELETE_RULE_ARN` = **TAMS Tools stack** output `ReplicationDeleteRuleArn`
 
-## Export Modal Configuration
+## SSM Parameters Configuration
 
-The export modal supports dynamic configuration through a JSON schema stored in AWS Systems Manager Parameter Store. This allows you to define custom export operations with configurable form fields, enabling flexible export workflows tailored to your specific requirements.
+TAMS Tools uses AWS Systems Manager (SSM) parameters for runtime configuration that can be modified post-deployment without requiring CloudFormation updates. These parameters allow you to customize the behavior and capabilities of different components.
 
-The export configuration is stored in the SSM parameter specified by the `VITE_APP_OMAKASE_EXPORT_EVENT_PARAMETER` environment variable.
+### Available Parameters
 
-For detailed information about the configuration schema, available field types, and examples, see [OMAKASE_EXPORT_SCHEMA.md](OMAKASE_EXPORT_SCHEMA.md).
+| Parameter | Component | CloudFormation Output | Documentation |
+|-----------|-----------|----------------------|---------------|
+| Export Events Configuration | Core | `OmakaseExportEventParameter` | [docs/OMAKASE_EXPORT_SCHEMA.md](docs/OMAKASE_EXPORT_SCHEMA.md) |
+| HLS Codec Mappings | HLS API | `HlsCodecsParameter` | [docs/HLS_CONFIGURATION.md](docs/HLS_CONFIGURATION.md) |
+| FFmpeg Commands | FFmpeg Ingest | `FfmpegCommandsParameter` | [docs/FFMPEG_CONFIGURATION.md](docs/FFMPEG_CONFIGURATION.md) |
+| Replication Connections | Replication | `ReplicationConnectionsParameter` | [docs/REPLICATION_CONFIGURATION.md](docs/REPLICATION_CONFIGURATION.md) |
+
+### Parameter Access
+
+Parameters are automatically created during deployment and can be found in AWS Systems Manager Parameter Store. Use the CloudFormation output values to reference the exact parameter names in your environment configuration.
+
+For detailed configuration instructions for each parameter, see the linked documentation files above.
 
 ## Customisation
 

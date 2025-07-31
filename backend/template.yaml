@@ -484,6 +484,12 @@ Outputs:
   OmakaseExportEventParameter:
     Value: !Ref OmakaseExportEventParameter
 
+  HlsCodecsParameter:
+    Value: !If
+      - DeployHls
+      - !Ref CodecsParameter
+      - ""
+
   HlsApiEndpoint:
     Value: !If
       - DeployHlsApi
