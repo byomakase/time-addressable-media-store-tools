@@ -521,10 +521,10 @@ Outputs:
       - !GetAtt HlsApiStack.Outputs.ApiEndpoint
       - ""
 
-  CreateNewFlowArn:
+  IngestCreateNewFlowArn:
     Value: !If
       - DeployIngest
-      - !GetAtt IngestStack.Outputs.CreateNewFlowArn
+      - !GetAtt IngestStack.Outputs.IngestCreateNewFlowArn
       - ""
 
   HlsIngestEndpoint:

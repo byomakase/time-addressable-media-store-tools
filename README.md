@@ -140,7 +140,7 @@ This will deploy an option in the WebUI to ingest content into TAMS. It supports
 
 **Required Environment Variables:**
 
-- `VITE_APP_AWS_CREATE_NEW_FLOW_ARN` = **TAMS Tools stack** output `CreateNewFlowArn`
+- `VITE_APP_AWS_INGEST_CREATE_NEW_FLOW_ARN` = **TAMS Tools stack** output `IngestCreateNewFlowArn`
 - `VITE_APP_AWS_HLS_INGEST_ENDPOINT` = **TAMS Tools stack** output `HlsIngestEndpoint`
 - `VITE_APP_AWS_HLS_INGEST_ARN` = **TAMS Tools stack** output `HlsIngestArn`
 
@@ -150,7 +150,7 @@ This will deploy an option in the WebUI to enable FFmpeg functionality, it suppo
 
 **Required Environment Variables:**
 
-- `VITE_APP_AWS_CREATE_NEW_FLOW_ARN` = **TAMS Tools stack** output `CreateNewFlowArn`
+- `VITE_APP_AWS_INGEST_CREATE_NEW_FLOW_ARN` = **TAMS Tools stack** output `IngestCreateNewFlowArn`
 - `VITE_APP_AWS_FFMPEG_ENDPOINT` = **TAMS Tools stack** output `FfmpegEndpoint`
 - `VITE_APP_AWS_FFMPEG_COMMANDS_PARAMETER` = **TAMS Tools stack** output `FfmpegCommandsParameter`
 - `VITE_APP_AWS_FFMPEG_BATCH_ARN` = **TAMS Tools stack** output `FfmpegBatchArn`

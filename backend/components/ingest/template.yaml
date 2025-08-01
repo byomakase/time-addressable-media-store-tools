@@ -50,7 +50,7 @@ Resources:
             Action:
               - states:StartSyncExecution
             Resource:
-              - !Ref CreateNewFlow
+              - !Ref IngestCreateNewFlow
 
   SqsSegmentIngestionFunction:
     Type: AWS::Serverless::Function
@@ -125,7 +125,7 @@ Resources:
       VisibilityTimeout: 300
       MessageRetentionPeriod: 86400
 
-  CreateNewFlowLogGroup:
+  IngestCreateNewFlowLogGroup:
     Type: AWS::Logs::LogGroup
     Metadata:
       cfn_nag:
@@ -133,10 +133,10 @@ Resources:
           - id: W84
             reason: Encryption no required.
     Properties:
-      LogGroupName: !Sub /aws/vendedlogs/states/${ParentStackName}-create-new-flow
+      LogGroupName: !Sub /aws/vendedlogs/states/${ParentStackName}-ingest-create-new-flow
       RetentionInDays: 30
 
-  CreateNewFlow:
+  IngestCreateNewFlow:
     Type: AWS::Serverless::StateMachine
     Properties:
       Type: EXPRESS
@@ -147,7 +147,7 @@ Resources:
         IncludeExecutionData: True
         Destinations:
           - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt CreateNewFlowLogGroup.Arn
+              LogGroupArn: !GetAtt IngestCreateNewFlowLogGroup.Arn
       DefinitionUri: statemachines/createNewFlow.yaml
       DefinitionSubstitutions:
         ConnectionArn: !Ref TamsConnectionArn
@@ -171,18 +171,18 @@ Resources:
               Action:
                 - logs:CreateLogStream
                 - logs:PutLogEvents
-              Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CreateNewFlowLogGroup}:log-stream:*
+              Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${IngestCreateNewFlowLogGroup}:log-stream:*
             - Effect: Allow
               Action:
                 - logs:PutDestination
                 - logs:PutDestinationPolicy
-              Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CreateNewFlowLogGroup}:destination:*
+              Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${IngestCreateNewFlowLogGroup}:destination:*
             - Effect: Allow
               Action:
                 - logs:PutSubscriptionFilter
               Resource:
-                - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CreateNewFlowLogGroup}
-                - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CreateNewFlowLogGroup}:destination:*
+                - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${IngestCreateNewFlowLogGroup}
+                - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${IngestCreateNewFlowLogGroup}:destination:*
         - Version: "2012-10-17"
           Statement:
             - Effect: Allow
@@ -242,5 +242,5 @@ Outputs:
   SegmentIngestQueueArn:
     Value: !GetAtt SegmentIngestQueue.Arn
 
-  CreateNewFlowArn:
-    Value: !Ref CreateNewFlow
+  IngestCreateNewFlowArn:
+    Value: !Ref IngestCreateNewFlow
