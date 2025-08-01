@@ -74,7 +74,7 @@ const Source = () => {
               label: "Tags",
               id: "tags",
               content: (
-                <Tags id={sourceId} entityType="sources" tags={source.tags} />
+                <Tags entityType="sources" entity={source} />
               ),
             },
             {

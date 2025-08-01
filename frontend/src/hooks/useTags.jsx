@@ -30,3 +30,46 @@ export const useDelete = (entityType, id) => {
     isDeleting: isMutating,
   };
 };
+
+export const useBulkUpdate = (entityType) => {
+  const { put } = useApi();
+  const { trigger, isMutating } = useSWRMutation(
+    [`/tags/bulk-update`, entityType],
+    ([path, entityType], { arg }) => {
+      const promises = arg.entityIds.map((entityId) =>
+        put(
+          `/${entityType}/${entityId}/tags/${arg.tagName}`,
+          arg.tagValue
+        ).then((response) => response.data)
+      );
+
+      return Promise.all(promises);
+    }
+  );
+
+  return {
+    bulkUpdate: trigger,
+    isBulkUpdating: isMutating,
+  };
+};
+
+export const useBulkDelete = (entityType) => {
+  const { del } = useApi();
+  const { trigger, isMutating } = useSWRMutation(
+    [`/tags/bulk-delete`, entityType],
+    ([path, entityType], { arg }) => {
+      const promises = arg.entityIds.map((entityId) =>
+        del(`/${entityType}/${entityId}/tags/${arg.tagName}`).then(
+          (response) => response.data
+        )
+      );
+
+      return Promise.all(promises);
+    }
+  );
+
+  return {
+    bulkDelete: trigger,
+    isBulkDeleting: isMutating,
+  };
+};

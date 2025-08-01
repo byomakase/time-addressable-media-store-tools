@@ -83,7 +83,7 @@ const Flow = () => {
             {
               label: "Tags",
               id: "tags",
-              content: <Tags id={flowId} entityType="flows" tags={flow.tags} />,
+              content: <Tags entityType="flows" entity={flow} />,
             },
             {
               label: "Flow collections",

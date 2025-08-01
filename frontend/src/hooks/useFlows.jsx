@@ -3,9 +3,9 @@ import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import paginationFetcher from "@/utils/paginationFetcher";
 
-export const useFlows = () => {
+const useFlowsQuery = (url) => {
   const { data, mutate, error, isLoading, isValidating } = useSWR(
-    "/flows?limit=300",
+    url,
     paginationFetcher,
     {
       refreshInterval: 3000,
@@ -20,6 +20,11 @@ export const useFlows = () => {
     error,
   };
 };
+
+export const useFlows = () => useFlowsQuery("/flows?limit=300");
+
+export const useFlowsBySource = (sourceId) =>
+  useFlowsQuery(sourceId ? `/flows?source_id=${sourceId}` : null);
 
 export const useFlow = (flowId) => {
   const { get } = useApi();
