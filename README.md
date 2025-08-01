@@ -124,7 +124,7 @@ The solution includes edit-by-reference functionality that allows for non-destru
 
 ### Optional Components
 
-This solution includes 4 optional components. They can be deployed by performing an update on the CloudFormation Stack and changing the relevant Yes/No option.
+This solution includes 5 optional components. They can be deployed by performing an update on the CloudFormation Stack and changing the relevant Yes/No option.
 
 #### DeployHlsApi
 
@@ -166,6 +166,14 @@ This will deploy replication functionality to the solution, enabling content rep
 - `VITE_APP_AWS_REPLICATION_BATCH_ARN` = **TAMS Tools stack** output `ReplicationBatchArn`
 - `VITE_APP_AWS_REPLICATION_CREATE_RULE_ARN` = **TAMS Tools stack** output `ReplicationCreateRuleArn`
 - `VITE_APP_AWS_REPLICATION_DELETE_RULE_ARN` = **TAMS Tools stack** output `ReplicationDeleteRuleArn`
+
+#### DeployLoopRecorder
+
+This will deploy the Loop Recorder functionality to the solution. The Loop Recorder is an automated StateMachine that manages flow duration by automatically deleting older segments when flows exceed a specified duration. When a flow has a `loop_recorder_duration` tag (in seconds), the system monitors segment additions and removes segments from the beginning of the flow to maintain the specified duration limit.
+
+**Note:** This component includes an Event Bridge rule that triggers for every `flows/segments_added` event, so it should only be deployed when loop recording functionality is required.
+
+**No additional environment variables required** - the Loop Recorder operates automatically based on flow tags.
 
 ## SSM Parameters Configuration
 

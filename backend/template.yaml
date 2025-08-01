@@ -9,6 +9,8 @@ Metadata:
           - DeployHlsApi
           - DeployIngestHls
           - DeployIngestFfmpeg
+          - DeployReplication
+          - DeployLoopRecorder
       - Label:
           default: Configuration
         Parameters:
@@ -24,6 +26,8 @@ Metadata:
         default: Deploy Ffmpeg ingest?
       DeployReplication:
         default: Deploy Replication?
+      DeployLoopRecorder:
+        default: Deploy Loop Recorder?
 
 Parameters:
   ApiStackName:
@@ -57,6 +61,13 @@ Parameters:
       - "No"
     Default: "No"
 
+  DeployLoopRecorder:
+    Type: String
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+
 Conditions:
   DeployHlsApi: !Equals [!Ref DeployHlsApi, "Yes"]
 
@@ -65,6 +76,8 @@ Conditions:
   DeployIngestFfmpeg: !Equals [!Ref DeployIngestFfmpeg, "Yes"]
 
   DeployReplication: !Equals [!Ref DeployReplication, "Yes"]
+
+  DeployLoopRecorder: !Equals [!Ref DeployLoopRecorder, "Yes"]
 
   DeployHls: !Or [!Condition DeployHlsApi, !Condition DeployIngestHls]
 
@@ -358,6 +371,17 @@ Resources:
               detail:
                 operation:
                   - FLOW_CREATION
+
+  LoopRecorderStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: components/loop-recorder/template.yaml
+      Parameters:
+        ApiEndpoint: !ImportValue
+          Fn::Sub: ${ApiStackName}-ApiEndpoint
+        TamsConnectionArn: !GetAtt TamsConnection.Arn
+        ApiStackName: !Ref ApiStackName
+    Condition: DeployLoopRecorder
 
   HlsApiStack:
     Type: AWS::CloudFormation::Stack
