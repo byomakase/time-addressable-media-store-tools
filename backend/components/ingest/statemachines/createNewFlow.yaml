@@ -37,7 +37,7 @@ States:
   Map flow.collected_by:
     Type: Map
     Items: >-
-      {% $flow.collected_by %}
+      {% [$map($flow.collected_by, function($v) {{ "parent_source_id": $flow.source_id, "flow_id": $v }})] %}
     ItemProcessor:
       ProcessorConfig:
         Mode: INLINE
@@ -51,7 +51,7 @@ States:
             InvocationConfig:
               ConnectionArn: ${ConnectionArn}
             ApiEndpoint: >-
-              {% '${TamsEndpoint}/flows/' & $states.input & '/flow_collection' %}
+              {% '${TamsEndpoint}/flows/' & $states.input.flow_id & '/flow_collection' %}
           Retry:
             - ErrorEquals:
                 - Events.ConnectionResource.InvalidConnectionState
@@ -62,7 +62,7 @@ States:
               MaxAttempts: 3
           Assign:
             collectedById: >-
-              {% $states.input %}
+              {% $states.input.flow_id %}
             flowCollection: >-
               {% $states.result.ResponseBody %}
           Output: >-
@@ -75,8 +75,8 @@ States:
             - Next: Map flow_collection
               Condition: >-
                 {% $exists($changes.format) %}
-              Output: >-
-                {% $states.input %}
+          Output: >-
+            {% [$states.input.parent_source_id] %}
         Map flow_collection:
           Type: Map
           Items: >-
