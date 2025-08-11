@@ -20,7 +20,7 @@ import StartIngestModal from "./components/StartIngestModal";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import useJobs from "@/hooks/useJobs";
 
-const MediaConvertIngestion = () => {
+const MediaConvertHlsIngestion = () => {
   const { jobs, isLoading } = useJobs();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState({});
@@ -139,7 +139,7 @@ const MediaConvertIngestion = () => {
         loadingText="Loading resources"
         loading={isLoading}
         trackBy="id"
-        header={<Header>MediaConvert Jobs</Header>}
+        header={<Header>MediaConvert HLS Jobs</Header>}
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
@@ -158,4 +158,4 @@ const MediaConvertIngestion = () => {
   );
 };
 
-export default MediaConvertIngestion;
+export default MediaConvertHlsIngestion;

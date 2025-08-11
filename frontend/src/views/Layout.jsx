@@ -84,13 +84,13 @@ const Layout = () => {
                     items: [
                       {
                         type: "link",
-                        text: "MediaLive Channels",
-                        href: "/channels",
+                        text: "MediaLive HLS Channels",
+                        href: "/hls-channels",
                       },
                       {
                         type: "link",
-                        text: "MediaConvert Jobs",
-                        href: "/jobs",
+                        text: "MediaConvert HLS Jobs",
+                        href: "/hls-jobs",
                       },
                       {
                         type: "link",
@@ -129,8 +129,8 @@ const Layout = () => {
                 items: [
                   {
                     type: "link",
-                    text: "Jobs",
-                    href: "/mediaconvert-jobs",
+                    text: "TAMS Jobs",
+                    href: "/mediaconvert-tams-jobs",
                   },
                 ],
               },

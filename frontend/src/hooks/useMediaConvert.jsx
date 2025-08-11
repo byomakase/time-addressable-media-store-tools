@@ -9,6 +9,10 @@ import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { AWS_TAMS_ENDPOINT, TAMS_AUTH_CONNECTION_ARN } from "@/constants";
 
+const isTamsJob = (job) => {
+  return job.Settings?.Inputs?.some(input => input.TamsSettings);
+};
+
 const mediaConvertFetcher = async () => {
   const client = await fetchAuthSession().then(
     (session) =>
@@ -21,10 +25,10 @@ const mediaConvertFetcher = async () => {
   for await (const page of paginateListJobs({ client }, {})) {
     allJobs.push(...page.Jobs);
   }
-  return allJobs;
+  return allJobs.filter(isTamsJob);;
 };
 
-export const useJobs = () => {
+export const useTamsJobs = () => {
   const { data, mutate, error, isLoading } = useSWR(
     "mediaconvert-jobs",
     mediaConvertFetcher,

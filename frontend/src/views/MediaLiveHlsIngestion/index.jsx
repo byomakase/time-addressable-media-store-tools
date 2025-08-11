@@ -17,7 +17,7 @@ import ConfirmationModal from "./components/ConfirmationModal";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useChannels } from "@/hooks/useChannels";
 
-const MediaLiveIngestion = () => {
+const MediaLiveHlsIngestion = () => {
   const { channels, isLoading } = useChannels();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState();
@@ -150,7 +150,7 @@ const MediaLiveIngestion = () => {
         loadingText="Loading resources"
         loading={isLoading}
         trackBy="id"
-        header={<Header>MediaLive Channels</Header>}
+        header={<Header>MediaLive HLS Channels</Header>}
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
@@ -195,4 +195,4 @@ const MediaLiveIngestion = () => {
   );
 };
 
-export default MediaLiveIngestion;
+export default MediaLiveHlsIngestion;

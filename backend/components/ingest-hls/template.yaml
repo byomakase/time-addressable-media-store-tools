@@ -129,8 +129,8 @@ Resources:
         Variables:
           POWERTOOLS_SERVICE_NAME: tams-tools
           POWERTOOLS_METRICS_NAMESPACE: TAMS-Tools
-          MEDIACONVERT_QUEUE: Default
           STATE_MACHINE_ARN: !Ref IngestHls
+          TAMS_ENDPOINT: !Ref ApiEndpoint
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -142,6 +142,7 @@ Resources:
             - Effect: Allow
               Action:
                 - medialive:ListChannels
+                - medialive:DescribeChannel
               Resource:
                 - !Sub arn:${AWS::Partition}:medialive:${AWS::Region}:${AWS::AccountId}:channel:*
             - Effect: Allow

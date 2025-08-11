@@ -109,9 +109,8 @@ The solution now includes several core features available without deploying opti
 
 #### MediaConvert Integration
 
-- **MediaConvert Jobs View**: Browse and monitor AWS Elemental MediaConvert jobs
+- **MediaConvert Jobs View**: Browse and monitor AWS Elemental MediaConvert jobs that use TAMS as input
 - **Job Details**: View detailed information about MediaConvert job status, progress, and configuration
-
 - **Export Integration**: Create MediaConvert jobs directly from TAMS content through the export modal
 
 #### Enhanced Export Modal
@@ -136,7 +135,7 @@ This will deploy a HLS API endpoint to the solution and enable a basic Video pla
 
 #### DeployIngestHls
 
-This will deploy an option in the WebUI to ingest content into TAMS. It supports ingestion from Elemental Media Live (Channel) and Elemental Media Convert (Job). It also provides an option to ingest from an external HLS manifest URL.
+This will deploy an option in the WebUI to ingest content into TAMS. It supports ingestion from Elemental Media Live channels (filtered to show only channels with HLS as the first output) and Elemental Media Convert jobs (filtered to show only jobs with HLS as the first output that do not use TAMS as input). It also provides an option to ingest from an external HLS manifest URL.
 
 **Required Environment Variables:**
 

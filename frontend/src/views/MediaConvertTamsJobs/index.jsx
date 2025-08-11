@@ -14,10 +14,10 @@ import { DateTime } from "luxon";
 import JobDetailModal from "./components/JobDetailModal";
 
 import { useCollection } from "@cloudscape-design/collection-hooks";
-import { useJobs } from "@/hooks/useMediaConvert";
+import { useTamsJobs } from "@/hooks/useMediaConvert";
 
-const MediaConvertJobs = () => {
-  const { jobs, isLoading } = useJobs();
+const MediaConvertTamsJobs = () => {
+  const { jobs, isLoading } = useTamsJobs();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState({});
 
@@ -86,8 +86,8 @@ const MediaConvertJobs = () => {
       header: "Jobs Status",
       cell: (item) => (
         <>
-          {item.JobPercentComplete ? (
-            <ProgressBar value={item.JobPercentComplete} />
+          {item.jobPercentComplete ? (
+            <ProgressBar value={item.jobPercentComplete} />
           ) : (
             <StatusIndicator type={STATUS_MAPPINGS[item.Status]}>
               {item.Status}
@@ -117,7 +117,7 @@ const MediaConvertJobs = () => {
         loadingText="Loading resources"
         loading={isLoading}
         trackBy="Id"
-        header={<Header>MediaConvert Jobs</Header>}
+        header={<Header>MediaConvert TAMS Jobs</Header>}
         columnDefinitions={columnDefinitions}
         columnDisplay={preferences.contentDisplay}
         contentDensity="compact"
@@ -135,4 +135,4 @@ const MediaConvertJobs = () => {
   );
 };
 
-export default MediaConvertJobs;
+export default MediaConvertTamsJobs;

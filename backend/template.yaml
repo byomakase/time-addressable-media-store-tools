@@ -98,19 +98,6 @@ Globals:
     Architectures:
       - arm64
 
-  Api:
-    EndpointConfiguration:
-      Type: REGIONAL
-    Auth:
-      DefaultAuthorizer: AWS_IAM
-      AddDefaultAuthorizerToCorsPreflight: False
-    TracingEnabled: true
-    MethodSettings:
-      - ResourcePath: /*
-        HttpMethod: "*"
-        DataTraceEnabled: True
-        LoggingLevel: INFO
-
 Resources:
   OpenIdAuthLayer:
     Type: AWS::Serverless::LayerVersion
