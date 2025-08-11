@@ -6,8 +6,8 @@ States:
     Assign:
       inputFlow: >-
         {% $states.input.inputFlow %}
-      sourceTimerange: >-
-        {% $boolean($states.input.sourceTimerange) ? $states.input.sourceTimerange: '_' %}
+      timerange: >-
+        {% $boolean($states.input.timerange) ? $states.input.timerange: '_' %}
       ffmpeg: >-
         {% $states.input.ffmpeg %}
       outputFlow: >-
@@ -26,7 +26,7 @@ States:
         limit: 10
         presigned: False
         timerange: >-
-          {% $sourceTimerange %}
+          {% $timerange %}
     Assign:
       nextKey: >-
         {% $states.result.Headers.`x-paging-nextkey` ? $states.result.Headers.`x-paging-nextkey`[0] : null %}
@@ -110,7 +110,7 @@ States:
         limit: 10
         presigned: False
         timerange: >-
-          {% $sourceTimerange %}
+          {% $timerange %}
         page: >-
           {% $nextKey %}
     Assign:

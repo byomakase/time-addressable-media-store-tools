@@ -69,7 +69,7 @@ const CreateJobModal = ({
     });
     await start({
       inputFlow: selectedFlowId,
-      sourceTimerange: timerange,
+      timerange,
       ffmpeg: { command: ffmpeg.command },
       outputFlow: destination,
     });
