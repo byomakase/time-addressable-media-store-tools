@@ -131,9 +131,14 @@ def post_segment_chunk(flow_id: str, segment_chunk: list) -> None:
         timeout=30,
     )
     if post.status_code != 201:
-        logger.error(f"Some segments failed to be posted for flow: {flow_id}")
-        logger.error("Request body", segment_chunk)
-        logger.error("Response body", post.json())
+        logger.error(
+            "Some segments failed to be posted",
+            extra={
+                "flow_id": flow_id,
+                "request_body": segment_chunk,
+                "response_body": post.json(),
+            },
+        )
     post.raise_for_status()
 
 
@@ -195,6 +200,9 @@ def initialize_flow_data(
 
     if not updated_flows.get(flow_id):
         flow_data = get_flow(flow_id)
+        # Only process multi, video and audio flows
+        if flow_data["format"] not in [FORMAT_AUDIO, FORMAT_VIDEO, FORMAT_MULTI]:
+            return updated_flows, updated_format_source_ids
         # Generate new source_id per flow format
         if not updated_format_source_ids.get(flow_data["format"]):
             updated_format_source_ids[flow_data["format"]] = str(uuid.uuid4())
@@ -363,6 +371,10 @@ def get_new_flows_and_segments(
             flows, format_source_ids = initialize_flow_data(
                 flow_id, edit_payload, flows, format_source_ids
             )
+
+            # Skip if flow was not added (e.g., image flows)
+            if flow_id not in flows:
+                continue
 
             # Get rate for this flow
             rate = get_flow_rate(flows[flow_id])
