@@ -68,7 +68,7 @@ const Flow = () => {
             </Button>
           </SpaceBetween>
         </Header>
-        <EntityDetails entity={flow} />
+        <EntityDetails entityType="flows" entity={flow} />
         <Tabs
           tabs={[
             {

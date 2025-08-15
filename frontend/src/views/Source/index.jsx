@@ -67,7 +67,7 @@ const Source = () => {
             </Button>
           </SpaceBetween>
         </Header>
-        <EntityDetails entity={source} />
+        <EntityDetails entityType="sources" entity={source} />
         <Tabs
           tabs={[
             {
