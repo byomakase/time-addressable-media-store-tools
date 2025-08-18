@@ -1,7 +1,6 @@
 {
     "Thumbnail size image": {
         "command": {
-            "-ss": "00:00:00",
             "-frames:v": "1",
             "-vf": "scale=320:180",
             "-qscale:v": "2",
@@ -24,7 +23,6 @@
     "Proxy Video (1080)": {
         "command": {
             "-c:v": "libx264",
-            "-copyts": null,
             "-vf": "scale=1920:1080",
             "-b:v": "5000k",
             "-f": "mpegts"
@@ -40,7 +38,6 @@
     "Proxy Video (720)": {
         "command": {
             "-c:v": "libx264",
-            "-copyts": null,
             "-vf": "scale=1280:720",
             "-b:v": "2500k",
             "-f": "mpegts"
