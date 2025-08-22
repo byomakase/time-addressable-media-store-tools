@@ -56,8 +56,8 @@ def calculate_ffmpeg_timing(segment, rate):
         output_timing = {"-copyts": None}
         if segment.get("ts_offset"):
             output_timing = {
-                "-muxpreload": 0,
-                "-muxdelay": 0,
+                "-muxpreload": "0",
+                "-muxdelay": "0",
                 # Use ts_offset for output timing adjustment
                 "-output_ts_offset": segment_timerange.start.to_unix_float(),
             }
@@ -152,11 +152,21 @@ def execute_ffmpeg_memory(input_bytes, ffmpeg_command, timing_args):
     args_list = [
         "/opt/bin/ffmpeg",
         "-hide_banner",
-        *[str(a) for k, v in timing_args["input"].items() for a in [k, v] if a],
+        *[
+            str(a)
+            for k, v in timing_args["input"].items()
+            for a in [k, v]
+            if a is not None
+        ],
         "-i",
         "pipe:0",
-        *[str(a) for k, v in timing_args["output"].items() for a in [k, v] if a],
-        *[str(a) for k, v in ffmpeg_command.items() for a in [k, v] if a],
+        *[
+            str(a)
+            for k, v in timing_args["output"].items()
+            for a in [k, v]
+            if a is not None
+        ],
+        *[str(a) for k, v in ffmpeg_command.items() for a in [k, v] if a is not None],
         "pipe:1",
     ]
     logger.info(" ".join(args_list))
