@@ -2,44 +2,47 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  FormField,
+  Input,
   Modal,
   SpaceBetween,
-  TextContent,
 } from "@cloudscape-design/components";
 import useAlertsStore from "@/stores/useAlertsStore";
-import { useDelete } from "@/hooks/useFlows";
+import { useDeleteTimerange } from "@/hooks/useFlows";
 
-const DeleteModal = ({
+const FlowDeleteTimeRangeModal = ({
   modalVisible,
   setModalVisible,
   selectedItems,
 }) => {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const { del } = useDelete();
+  const { delTimerange, isDeletingTimerange } = useDeleteTimerange();
   const addAlertItems = useAlertsStore((state) => state.addAlertItems);
   const delAlertItem = useAlertsStore((state) => state.delAlertItem);
+  const [timerange, setTimerange] = useState("");
 
-  const deleteFlow = async () => {
-    setIsDeleting(true);
-    const promises = selectedItems.map((item) => del({ flowId: item.id }));
+  const deleteTimerange = async () => {
+    const promises = selectedItems.map((item) =>
+      delTimerange({ flowId: item.id, timerange })
+    );
     const id = crypto.randomUUID();
     addAlertItems(
       selectedItems.map((flow, n) => ({
         type: "success",
         dismissible: true,
         dismissLabel: "Dismiss message",
-        content: `Flow ${flow.id} is being deleted. This will happen asynchronously`,
+        content: `Flow segments on flow ${flow.id} within the timerange ${timerange} are being deleted. This will happen asynchronously.`,
         id: `${id}-${n}`,
         onDismiss: () => delAlertItem(`${id}-${n}`),
       }))
     );
     await Promise.all(promises);
-    setIsDeleting(false);
     setModalVisible(false);
+    setTimerange("");
   };
 
   const handleDismiss = () => {
     setModalVisible(false);
+    setTimerange("");
   };
 
   return (
@@ -51,24 +54,36 @@ const DeleteModal = ({
           <SpaceBetween direction="horizontal" size="xs">
             <Button
               variant="link"
-              disabled={isDeleting}
+              disabled={isDeletingTimerange}
               onClick={handleDismiss}
             >
-              No
+              Cancel
             </Button>
-            <Button variant="primary" loading={isDeleting} onClick={deleteFlow}>
-              Yes
+            <Button
+              variant="primary"
+              loading={isDeletingTimerange}
+              onClick={deleteTimerange}
+            >
+              Delete
             </Button>
           </SpaceBetween>
         </Box>
       }
       header="Confirmation"
     >
-      <TextContent>
-        Are you sure you wish to DELETE the selected Flow(s)?
-      </TextContent>
+      <FormField
+        description="Provide a timerange for the segments to be deleted."
+        label="Timerange"
+      >
+        <Input
+          value={timerange}
+          onChange={({ detail }) => {
+            setTimerange(detail.value);
+          }}
+        />
+      </FormField>
     </Modal>
   );
 };
 
-export default DeleteModal;
+export default FlowDeleteTimeRangeModal;

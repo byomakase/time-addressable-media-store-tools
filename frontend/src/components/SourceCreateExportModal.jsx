@@ -6,7 +6,7 @@ import ExportModalFooter from "@/components/ExportModalFooter";
 import { useMediaConvertJob } from "@/hooks/useMediaConvertJob";
 import { useMediaConvertJobSpec } from "@/hooks/useMediaConvertJobSpec";
 
-const CreateExportModal = ({
+const SourceCreateExportModal = ({
   modalVisible,
   setModalVisible,
   selectedSourceId,
@@ -80,4 +80,4 @@ const CreateExportModal = ({
   );
 };
 
-export default CreateExportModal;
+export default SourceCreateExportModal;

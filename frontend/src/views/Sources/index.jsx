@@ -18,7 +18,7 @@ import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useSources } from "@/hooks/useSources";
 import usePreferencesStore from "@/stores/usePreferencesStore";
 import ReplicationModal from "@/components/ReplicationModal";
-import CreateExportModal from "./components/CreateExportModal";
+import SourceActionsButton from "@/components/SourceActionsButton";
 import { PAGE_SIZE_PREFERENCE } from "@/constants";
 
 const columnDefinitions = [
@@ -180,20 +180,9 @@ const Sources = () => {
                 >
                   Replication
                 </Button>
-                <ButtonDropdown
-                  onItemClick={handleOnClick}
-                  disabled={selectedItems.length === 0}
-                  expandableGroups
-                  items={[
-                    {
-                      text: "Create MediaConvert Job",
-                      id: "create-export",
-                      disabled: selectedItems.length !== 1,
-                    },
-                  ]}
-                >
-                  Actions
-                </ButtonDropdown>
+                <SourceActionsButton
+                  selectedItems={selectedItems}
+                />
                 <Toggle
                   onChange={({ detail }) => setShowHierarchy(detail.checked)}
                   checked={showHierarchy}
@@ -228,15 +217,6 @@ const Sources = () => {
       />
       {
         {
-          "create-export": (
-            <CreateExportModal
-              modalVisible={modalVisible}
-              setModalVisible={setModalVisible}
-              selectedSourceId={
-                selectedItems.length > 0 ? selectedItems[0].id : ""
-              }
-            />
-          ),
           replication: (
             <ReplicationModal
               originType="Source"

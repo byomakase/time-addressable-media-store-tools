@@ -8,21 +8,25 @@ import {
   Modal,
   Select,
   SpaceBetween,
+  TextContent,
 } from "@cloudscape-design/components";
+import { Link } from "react-router-dom";
 import useAlertsStore from "@/stores/useAlertsStore";
 import { AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
-import { useExportStart } from "@/hooks/useFfmpeg";
+import { useJobStart } from "@/hooks/useFfmpeg";
+import createFFmegFlow from "@/utils/createFFmegFlow";
 import { useParameter } from "@/hooks/useParameters";
 
-const CreateExportModal = ({
+const FlowCreateJobModal = ({
   modalVisible,
   setModalVisible,
-  selectedFlowIds,
+  selectedFlowId,
 }) => {
   const [timerange, setTimerange] = useState("");
+  const [outputFlow, setoutputFlow] = useState("");
   const [ffmpeg, setFfmpeg] = useState();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { start } = useExportStart();
+  const { start } = useJobStart();
   const addAlertItem = useAlertsStore((state) => state.addAlertItem);
   const delAlertItem = useAlertsStore((state) => state.delAlertItem);
   const { parameter: commandsData } = useParameter(AWS_FFMPEG_COMMANDS_PARAMETER);
@@ -30,32 +34,44 @@ const CreateExportModal = ({
   const commands = useMemo(() => {
     if (!commandsData) return [];
     return Object.entries(commandsData)
-      .filter(([_, value]) => !value.tams)
+      .filter(([_, value]) => value.tams)
       .map(([label, value]) => ({ label, value }));
   }, [commandsData]);
 
   const handleDismiss = () => {
     setModalVisible(false);
     setTimerange("");
+    setoutputFlow("");
     setFfmpeg();
     setIsSubmitting(false);
   };
 
   const createJob = async () => {
     setIsSubmitting(true);
+    const destination =
+      outputFlow || (await createFFmegFlow(selectedFlowId, ffmpeg.tams));
     const id = crypto.randomUUID();
     addAlertItem({
       type: "success",
       dismissible: true,
       dismissLabel: "Dismiss message",
-      content: "The Export is being started...",
+      content: (
+        <TextContent>
+          <p>The Batch Job is being started...</p>
+          <p>
+            It will ingest into flow{" "}
+            <Link to={`/flows/${destination}`}>{destination}</Link>
+          </p>
+        </TextContent>
+      ),
       id: id,
       onDismiss: () => delAlertItem(id),
     });
     await start({
-      timerange: timerange,
-      flowIds: selectedFlowIds,
+      inputFlow: selectedFlowId,
+      timerange,
       ffmpeg: { command: ffmpeg.command },
+      outputFlow: destination,
     });
     handleDismiss();
     setIsSubmitting(false);
@@ -86,7 +102,7 @@ const CreateExportModal = ({
           </SpaceBetween>
         </Box>
       }
-      header="Create FFmpeg Export Job"
+      header="Create FFmpeg Batch Job"
     >
       <SpaceBetween size="xs">
         <FormField
@@ -97,6 +113,17 @@ const CreateExportModal = ({
             value={timerange}
             onChange={({ detail }) => {
               setTimerange(detail.value);
+            }}
+          />
+        </FormField>
+        <FormField
+          description="(Optional) Specify the ID for an existing Flow to ingest into. Leave blank to create a new Flow."
+          label="Destination"
+        >
+          <Input
+            value={outputFlow}
+            onChange={({ detail }) => {
+              setoutputFlow(detail.value);
             }}
           />
         </FormField>
@@ -126,4 +153,4 @@ const CreateExportModal = ({
   );
 };
 
-export default CreateExportModal;
+export default FlowCreateJobModal;

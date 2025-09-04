@@ -1,17 +1,15 @@
 import {
   Box,
-  Button,
-  CopyToClipboard,
   Header,
   SpaceBetween,
   Spinner,
   Tabs,
 } from "@cloudscape-design/components";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
-import { AWS_HLS_API_ENDPOINT } from "@/constants";
 import CollectedBy from "@/components/CollectedBy";
 import Collection from "@/components/Collection";
+import EntityHeader from "@/components/EntityHeader";
 import EntityDetails from "@/components/EntityDetails";
 import EssenceParameters from "./components/EssenceParameters";
 import SegmentsTab from "./components/SegmentsTab";
@@ -21,52 +19,12 @@ import { useFlow } from "@/hooks/useFlows";
 const Flow = () => {
   const { flowId } = useParams();
   const { flow, isLoading: loadingFlow } = useFlow(flowId);
-  const navigate = useNavigate();
-
-  const followLink = (e) => {
-    e.preventDefault();
-    navigate(e.detail.href);
-  };
 
   return !loadingFlow ? (
     flow ? (
       <SpaceBetween size="l">
         <Header variant="h2">
-          <SpaceBetween size="xl" direction="horizontal">
-            <span>Flow details</span>
-            {AWS_HLS_API_ENDPOINT && (
-              <span>
-                <Button
-                  href={`/hlsplayer/flows/${flowId}`}
-                  variant="inline-link"
-                  onFollow={followLink}
-                >
-                  View HLS
-                </Button>
-                <CopyToClipboard
-                  copyButtonAriaLabel="Copy Manifest link"
-                  copyErrorText="Link failed to copy"
-                  copySuccessText="Link copied"
-                  textToCopy={`${AWS_HLS_API_ENDPOINT}/flows/${flowId}/manifest.m3u8`}
-                  variant="icon"
-                />
-              </span>
-            )}
-            <Button
-              href={`/player/flows/${flowId}`}
-              variant="inline-link"
-              onFollow={followLink}
-            >
-              View Player
-            </Button>
-            <Button
-              href={`/diagram/flows/${flowId}`}
-              variant="inline-link"
-              onFollow={followLink}
-            >
-              View Diagram
-            </Button>
-          </SpaceBetween>
+          <EntityHeader type="Flow" entity={flow} />
         </Header>
         <EntityDetails entityType="flows" entity={flow} />
         <Tabs

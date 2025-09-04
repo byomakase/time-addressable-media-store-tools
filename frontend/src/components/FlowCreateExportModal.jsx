@@ -8,24 +8,21 @@ import {
   Modal,
   Select,
   SpaceBetween,
-  TextContent,
 } from "@cloudscape-design/components";
-import { Link } from "react-router-dom";
 import useAlertsStore from "@/stores/useAlertsStore";
 import { AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
-import { useCreateRule } from "@/hooks/useFfmpeg";
-import createFFmegFlow from "@/utils/createFFmegFlow";
+import { useExportStart } from "@/hooks/useFfmpeg";
 import { useParameter } from "@/hooks/useParameters";
 
-const CreateRuleModal = ({
+const FlowCreateExportModal = ({
   modalVisible,
   setModalVisible,
-  selectedFlowId,
+  selectedFlowIds,
 }) => {
-  const [outputFlow, setoutputFlow] = useState("");
+  const [timerange, setTimerange] = useState("");
   const [ffmpeg, setFfmpeg] = useState();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { put } = useCreateRule();
+  const { start } = useExportStart();
   const addAlertItem = useAlertsStore((state) => state.addAlertItem);
   const delAlertItem = useAlertsStore((state) => state.delAlertItem);
   const { parameter: commandsData } = useParameter(AWS_FFMPEG_COMMANDS_PARAMETER);
@@ -33,41 +30,32 @@ const CreateRuleModal = ({
   const commands = useMemo(() => {
     if (!commandsData) return [];
     return Object.entries(commandsData)
-      .filter(([_, value]) => value.tams)
+      .filter(([_, value]) => !value.tams)
       .map(([label, value]) => ({ label, value }));
   }, [commandsData]);
 
   const handleDismiss = () => {
     setModalVisible(false);
-    setoutputFlow("");
+    setTimerange("");
     setFfmpeg();
+    setIsSubmitting(false);
   };
 
-  const createRule = async () => {
+  const createJob = async () => {
     setIsSubmitting(true);
-    const destination =
-      outputFlow || (await createFFmegFlow(selectedFlowId, ffmpeg.tams));
     const id = crypto.randomUUID();
     addAlertItem({
       type: "success",
       dismissible: true,
       dismissLabel: "Dismiss message",
-      content: (
-        <TextContent>
-          <p>The Rule is being created...</p>
-          <p>
-            It will ingest into flow{" "}
-            <Link to={`/flows/${destination}`}>{destination}</Link>
-          </p>
-        </TextContent>
-      ),
+      content: "The Export is being started...",
       id: id,
       onDismiss: () => delAlertItem(id),
     });
-    await put({
-      flowId: selectedFlowId,
-      outputFlowId: destination,
-      payload: ffmpeg,
+    await start({
+      timerange: timerange,
+      flowIds: selectedFlowIds,
+      ffmpeg: { command: ffmpeg.command },
     });
     handleDismiss();
     setIsSubmitting(false);
@@ -91,24 +79,24 @@ const CreateRuleModal = ({
               variant="primary"
               loading={isSubmitting}
               disabled={!ffmpeg}
-              onClick={createRule}
+              onClick={createJob}
             >
               Create
             </Button>
           </SpaceBetween>
         </Box>
       }
-      header="Create FFmpeg Event Rule"
+      header="Create FFmpeg Export Job"
     >
       <SpaceBetween size="xs">
         <FormField
-          description="(Optional) Specify the ID for an existing Flow to ingest into. Leave blank to create a new Flow."
-          label="Destination"
+          description="(Optional) Provide a timerange for the segments to processed."
+          label="Timerange"
         >
           <Input
-            value={outputFlow}
+            value={timerange}
             onChange={({ detail }) => {
-              setoutputFlow(detail.value);
+              setTimerange(detail.value);
             }}
           />
         </FormField>
@@ -138,4 +126,4 @@ const CreateRuleModal = ({
   );
 };
 
-export default CreateRuleModal;
+export default FlowCreateExportModal;

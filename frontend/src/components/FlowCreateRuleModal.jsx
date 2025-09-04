@@ -13,20 +13,19 @@ import {
 import { Link } from "react-router-dom";
 import useAlertsStore from "@/stores/useAlertsStore";
 import { AWS_FFMPEG_COMMANDS_PARAMETER } from "@/constants";
-import { useJobStart } from "@/hooks/useFfmpeg";
+import { useCreateRule } from "@/hooks/useFfmpeg";
 import createFFmegFlow from "@/utils/createFFmegFlow";
 import { useParameter } from "@/hooks/useParameters";
 
-const CreateJobModal = ({
+const FlowCreateRuleModal = ({
   modalVisible,
   setModalVisible,
   selectedFlowId,
 }) => {
-  const [timerange, setTimerange] = useState("");
   const [outputFlow, setoutputFlow] = useState("");
   const [ffmpeg, setFfmpeg] = useState();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { start } = useJobStart();
+  const { put } = useCreateRule();
   const addAlertItem = useAlertsStore((state) => state.addAlertItem);
   const delAlertItem = useAlertsStore((state) => state.delAlertItem);
   const { parameter: commandsData } = useParameter(AWS_FFMPEG_COMMANDS_PARAMETER);
@@ -40,13 +39,11 @@ const CreateJobModal = ({
 
   const handleDismiss = () => {
     setModalVisible(false);
-    setTimerange("");
     setoutputFlow("");
     setFfmpeg();
-    setIsSubmitting(false);
   };
 
-  const createJob = async () => {
+  const createRule = async () => {
     setIsSubmitting(true);
     const destination =
       outputFlow || (await createFFmegFlow(selectedFlowId, ffmpeg.tams));
@@ -57,7 +54,7 @@ const CreateJobModal = ({
       dismissLabel: "Dismiss message",
       content: (
         <TextContent>
-          <p>The Batch Job is being started...</p>
+          <p>The Rule is being created...</p>
           <p>
             It will ingest into flow{" "}
             <Link to={`/flows/${destination}`}>{destination}</Link>
@@ -67,11 +64,10 @@ const CreateJobModal = ({
       id: id,
       onDismiss: () => delAlertItem(id),
     });
-    await start({
-      inputFlow: selectedFlowId,
-      timerange,
-      ffmpeg: { command: ffmpeg.command },
-      outputFlow: destination,
+    await put({
+      flowId: selectedFlowId,
+      outputFlowId: destination,
+      payload: ffmpeg,
     });
     handleDismiss();
     setIsSubmitting(false);
@@ -95,27 +91,16 @@ const CreateJobModal = ({
               variant="primary"
               loading={isSubmitting}
               disabled={!ffmpeg}
-              onClick={createJob}
+              onClick={createRule}
             >
               Create
             </Button>
           </SpaceBetween>
         </Box>
       }
-      header="Create FFmpeg Batch Job"
+      header="Create FFmpeg Event Rule"
     >
       <SpaceBetween size="xs">
-        <FormField
-          description="(Optional) Provide a timerange for the segments to processed."
-          label="Timerange"
-        >
-          <Input
-            value={timerange}
-            onChange={({ detail }) => {
-              setTimerange(detail.value);
-            }}
-          />
-        </FormField>
         <FormField
           description="(Optional) Specify the ID for an existing Flow to ingest into. Leave blank to create a new Flow."
           label="Destination"
@@ -153,4 +138,4 @@ const CreateJobModal = ({
   );
 };
 
-export default CreateJobModal;
+export default FlowCreateRuleModal;

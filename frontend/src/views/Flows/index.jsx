@@ -1,8 +1,8 @@
-import { AWS_FFMPEG_ENDPOINT, PAGE_SIZE_PREFERENCE } from "@/constants";
+import { useState } from "react";
+import { PAGE_SIZE_PREFERENCE } from "@/constants";
 import {
   Box,
   Button,
-  ButtonDropdown,
   CollectionPreferences,
   CopyToClipboard,
   Header,
@@ -12,17 +12,12 @@ import {
   TextFilter,
   Toggle,
 } from "@cloudscape-design/components";
-import DeleteModal from "./components/DeleteModal";
-import DeleteTimeRangeModal from "./components/DeleteTimeRangeModal";
 import { useFlows } from "@/hooks/useFlows";
 import { Link } from "react-router-dom";
 import { useCollection } from "@cloudscape-design/collection-hooks";
-import { useState } from "react";
 import usePreferencesStore from "@/stores/usePreferencesStore";
 import ReplicationModal from "@/components/ReplicationModal";
-import CreateExportModal from "./components/CreateExportModal";
-import CreateRuleModal from "./components/CreateRuleModal";
-import CreateJobModal from "./components/CreateJobModal";
+import FlowActionsButton from "@/components/FlowActionsButton";
 
 const columnDefinitions = [
   {
@@ -237,53 +232,9 @@ const Flows = () => {
                 >
                   Replication
                 </Button>
-                <ButtonDropdown
-                  onItemClick={handleOnClick}
-                  disabled={selectedItems.length === 0}
-                  expandableGroups
-                  items={[
-                    {
-                      text: "Delete",
-                      id: "delete",
-                      disabled: !(selectedItems.length > 0),
-                    },
-                    {
-                      text: "Timerange delete",
-                      id: "timerange",
-                      disabled: !(selectedItems.length > 0),
-                    },
-                    AWS_FFMPEG_ENDPOINT
-                      ? {
-                          text: "FFmpeg",
-                          id: "ffmpeg",
-                          disabled:
-                            selectedItems.length === 0 ||
-                            selectedItems.some((item) => !item.container),
-                          disabledReason:
-                            selectedItems.some((item) => !item.container) &&
-                            "The container property must have a value on all selected flows.",
-                          items: [
-                            {
-                              text: "Create FFmpeg Export",
-                              id: "create-export",
-                            },
-                            {
-                              text: "Create FFmpeg Rule",
-                              id: "create-rule",
-                              disabled: selectedItems.length !== 1,
-                            },
-                            {
-                              text: "Create FFmpeg Job",
-                              id: "create-job",
-                              disabled: selectedItems.length !== 1,
-                            },
-                          ],
-                        }
-                      : {},
-                  ]}
-                >
-                  Actions
-                </ButtonDropdown>
+                <FlowActionsButton
+                  selectedItems={selectedItems}
+                />
                 <Toggle
                   onChange={({ detail }) => setShowHierarchy(detail.checked)}
                   checked={showHierarchy}
@@ -318,45 +269,6 @@ const Flows = () => {
       />
       {
         {
-          delete: (
-            <DeleteModal
-              modalVisible={modalVisible}
-              setModalVisible={setModalVisible}
-              selectedItems={selectedItems}
-            />
-          ),
-          timerange: (
-            <DeleteTimeRangeModal
-              modalVisible={modalVisible}
-              setModalVisible={setModalVisible}
-              selectedItems={selectedItems}
-            />
-          ),
-          "create-export": (
-            <CreateExportModal
-              modalVisible={modalVisible}
-              setModalVisible={setModalVisible}
-              selectedFlowIds={selectedItems.map((item) => item.id)}
-            />
-          ),
-          "create-rule": (
-            <CreateRuleModal
-              modalVisible={modalVisible}
-              setModalVisible={setModalVisible}
-              selectedFlowId={
-                selectedItems.length > 0 ? selectedItems[0].id : ""
-              }
-            />
-          ),
-          "create-job": (
-            <CreateJobModal
-              modalVisible={modalVisible}
-              setModalVisible={setModalVisible}
-              selectedFlowId={
-                selectedItems.length > 0 ? selectedItems[0].id : ""
-              }
-            />
-          ),
           replication: (
             <ReplicationModal
               originType="Flow"
