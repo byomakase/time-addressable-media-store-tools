@@ -8,9 +8,6 @@ Parameters:
   
   TamsConnectionArn:
     Type: String
-  
-  ApiStackName:
-    Type: String
 
 Resources:
   LoopRecorder:
@@ -61,12 +58,7 @@ Resources:
                   states:HTTPEndpoint:
                     - !Sub ${ApiEndpoint}/flows/*
       Events:
-        EBRule:
-          Type: EventBridgeRule
+        ScheduleEvent:
+          Type: ScheduleV2
           Properties:
-            EventBusName: !Ref ApiStackName
-            Pattern:
-              source:
-                - tams.api
-              detail-type:
-                - flows/segments_added
+            ScheduleExpression: rate(1 minute)

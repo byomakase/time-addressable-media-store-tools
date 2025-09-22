@@ -367,7 +367,6 @@ Resources:
         ApiEndpoint: !ImportValue
           Fn::Sub: ${ApiStackName}-ApiEndpoint
         TamsConnectionArn: !GetAtt TamsConnection.Arn
-        ApiStackName: !Ref ApiStackName
     Condition: DeployLoopRecorder
 
   HlsApiStack:
