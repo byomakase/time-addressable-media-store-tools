@@ -9,6 +9,9 @@ Parameters:
   TamsConnectionArn:
     Type: String
 
+  ApiStackName:
+    Type: String
+
 Resources:
   LoopRecorder:
     Type: AWS::Serverless::StateMachine
@@ -61,4 +64,5 @@ Resources:
         ScheduleEvent:
           Type: ScheduleV2
           Properties:
+            Name: !Ref ApiStackName
             ScheduleExpression: rate(1 minute)
