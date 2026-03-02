@@ -37,6 +37,11 @@ Globals:
 Resources:
   HlsManifestFunctionUrlPermission:
     Type: AWS::Lambda::Permission
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W24
+            reason: Required permission to allow Lambda to generate pre-signed URLs for itself
     Properties:
       FunctionName: !GetAtt HlsManifestFunction.Arn
       FunctionUrlAuthType: AWS_IAM
