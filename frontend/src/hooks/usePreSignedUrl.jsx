@@ -1,6 +1,6 @@
 import useSWR from "swr";
-import getPresignedUrl from "@/utils/getPresignedUrl";
-import { AWS_HLS_OBJECT_LAMBDA_ACCESS_POINT_ARN } from "@/constants";
+import { getLambdaSignedUrl } from "@/utils/getLambdaSignedUrl";
+import { AWS_HLS_FUNCTION_URL } from "@/constants";
 import useAwsCredentials from "@/hooks/useAwsCredentials";
 
 export const usePresignedUrl = (type, id) => {
@@ -8,13 +8,13 @@ export const usePresignedUrl = (type, id) => {
   const { data, error, isLoading } = useSWR(
     type && id
       ? {
-          bucket: AWS_HLS_OBJECT_LAMBDA_ACCESS_POINT_ARN,
-          key: `${type}/${id}/manifest.m3u8`,
-          expiry: 3600,
+          functionUrl: AWS_HLS_FUNCTION_URL,
+          path: `/${type}/${id}/manifest.m3u8`,
+          expiresIn: 3600,
           credentials,
         }
       : null,
-    getPresignedUrl
+    getLambdaSignedUrl
   );
 
   return {
