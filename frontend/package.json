@@ -11,9 +11,6 @@
     "envLocal": "node scripts/envValues.js"
   },
   "dependencies": {
-    "@smithy/signature-v4": "^5.3.8",
-    "@smithy/protocol-http": "^5.3.8",
-    "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/client-eventbridge": "^3.995.0",
     "@aws-sdk/client-mediaconvert": "^3.995.0",
     "@aws-sdk/client-medialive": "^3.995.0",

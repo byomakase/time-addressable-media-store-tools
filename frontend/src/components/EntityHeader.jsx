@@ -10,7 +10,7 @@ import { IS_HLS_DEPLOYED, AWS_HLS_FUNCTION_URL } from "@/constants";
 import SourceActionsButton from "@/components/SourceActionsButton";
 import FlowActionsButton from "@/components/FlowActionsButton";
 import useAwsCredentials from "@/hooks/useAwsCredentials";
-import { getLambdaSignedUrl } from "@/utils/getLambdaSignedUrl";
+import getLambdaPresignedUrl from "@/utils/getLambdaPresignedUrl";
 
 const EntityHeader = ({ type, entity }) => {
   const entityType = `${type.toLowerCase()}s`;
@@ -18,17 +18,12 @@ const EntityHeader = ({ type, entity }) => {
   const credentials = useAwsCredentials();
 
   const handleCopyClick = async () => {
-    try {
-      const url = await getLambdaSignedUrl({
-        functionUrl: AWS_HLS_FUNCTION_URL,
-        path: `/${entityType}/${entity.id}/manifest.m3u8`,
-        expiresIn: 3600,
-        credentials,
-      });
-      navigator.clipboard.writeText(url);
-    } catch (error) {
-      console.error("Failed to copy manifest link:", error);
-    }
+    const url = await getLambdaPresignedUrl({
+      functionUrl: AWS_HLS_FUNCTION_URL,
+      path: `${entityType}/${entity.id}/manifest.m3u8`,
+      credentials,
+    });
+    navigator.clipboard.writeText(url);
   };
 
   const followLink = (e) => {

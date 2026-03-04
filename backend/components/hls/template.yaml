@@ -35,22 +35,8 @@ Globals:
       - arm64
 
 Resources:
-  HlsManifestFunctionUrlPermission:
-    Type: AWS::Lambda::Permission
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W24
-            reason: Required permission to allow Lambda to generate pre-signed URLs for itself
-    Properties:
-      FunctionName: !GetAtt HlsManifestFunction.Arn
-      FunctionUrlAuthType: AWS_IAM
-      Action: lambda:InvokeFunctionUrl
-      Principal: !Sub "${AWS::AccountId}"
-
   AuthRolePolicyHls:
     Type: AWS::IAM::RolePolicy
-    DependsOn: HlsManifestFunctionUrl
     Properties:
       RoleName: !Ref AuthRoleName
       PolicyName: !Ref AWS::StackName
@@ -62,9 +48,22 @@ Resources:
               - lambda:InvokeFunctionUrl
               - lambda:InvokeFunction
             Resource:
-              - !GetAtt HlsManifestFunction.Arn
+              - !GetAtt HlsGeneratorFunction.Arn
 
-  HlsManifestFunction:
+  HlsGeneratorFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W24
+            reason: Required permission to allow Lambda to generate pre-signed URLs for itself
+    Properties:
+      FunctionName: !GetAtt HlsGeneratorFunction.Arn
+      FunctionUrlAuthType: AWS_IAM
+      Action: lambda:InvokeFunctionUrl
+      Principal: !Ref AWS::AccountId
+
+  HlsGeneratorFunction:
     Type: AWS::Serverless::Function
     Metadata:
       cfn_nag:
@@ -74,7 +73,7 @@ Resources:
           - id: W92
             reason: ReservedConcurrentExecutions not required
     Properties:
-      CodeUri: functions/hls-generator-lambda/
+      CodeUri: functions/hls-generator/
       FunctionUrlConfig:
         AuthType: AWS_IAM
         Cors:
@@ -109,12 +108,12 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${CodecsParameterName}
 
-  HlsManifestFunctionSelfInvokePolicy:
+  HlsGeneratorFunctionSelfInvokePolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub "${HlsManifestFunction}SelfInvoke"
+      PolicyName: !Sub "${HlsGeneratorFunction}SelfInvoke"
       Roles:
-        - !Ref HlsManifestFunctionRole
+        - !Ref HlsGeneratorFunctionRole
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -124,8 +123,8 @@ Resources:
               - lambda:InvokeFunction
               - lambda:GetFunctionUrlConfig
             Resource:
-              - !GetAtt HlsManifestFunction.Arn
+              - !GetAtt HlsGeneratorFunction.Arn
 
 Outputs:
   HlsFunctionUrl:
-    Value: !GetAtt HlsManifestFunctionUrl.FunctionUrl
+    Value: !GetAtt HlsGeneratorFunctionUrl.FunctionUrl
