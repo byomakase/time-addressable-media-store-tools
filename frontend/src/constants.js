@@ -1,6 +1,7 @@
 /************* ENVIRONMENT VARIABLES **************/
 export const APP_TITLE = import.meta.env.VITE_APP_TITLE;
 export const APP_TITLE_LOGO = import.meta.env.VITE_APP_TITLE_LOGO;
+export const SOLUTION_VERSION = import.meta.env.VITE_APP_SOLUTION_VERSION;
 export const OIDC_AUTHORITY = import.meta.env.VITE_APP_OIDC_AUTHORITY;
 export const OIDC_CLIENT_ID = import.meta.env.VITE_APP_OIDC_CLIENT_ID;
 export const OIDC_REDIRECT_URI = import.meta.env.VITE_APP_OIDC_REDIRECT_URI;

@@ -110,6 +110,11 @@ Parameters:
       - "No"
     Default: "No"
 
+Mappings:
+  Solution:
+    Constants:
+      Version: "4.0"
+
 Conditions:
   UsingCognito: !Or [!Equals [!Ref OAuthClientId, ""], !Equals [!Ref OAuthClientSecret, ""], !Equals [!Ref OAuthAuthorizationEndpoint, ""] ]
 
@@ -626,3 +631,6 @@ Outputs:
       - DeployReplication
       - !GetAtt ReplicationStack.Outputs.ReplicationDeleteRuleArn
       - ""
+
+  SolutionVersion:
+    Value: !FindInMap [Solution, Constants, Version]

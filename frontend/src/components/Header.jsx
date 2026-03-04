@@ -2,7 +2,7 @@ import { useState } from "react";
 import { TopNavigation } from "@cloudscape-design/components";
 import { useAuth } from "react-oidc-context";
 import { Mode, applyMode } from "@cloudscape-design/global-styles";
-import { APP_TITLE, APP_TITLE_LOGO } from "@/constants";
+import { APP_TITLE, APP_TITLE_LOGO, SOLUTION_VERSION } from "@/constants";
 import "./Header.css";
 
 const Header = () => {
@@ -45,6 +45,7 @@ const Header = () => {
             auth.user?.profile?.email ||
             auth.user?.profile?.preferred_username ||
             "User",
+          description: `TAMS Tools Version: ${SOLUTION_VERSION}`,
           iconName: "user-profile",
           onItemClick: handleDropdownClick,
           items: [
