@@ -97,7 +97,9 @@ npm run dev
 
 ### Build and deploy the web app to a web server
 
-To do this run the following command:
+**NOTE: When deploying to a Web server the value of the `VITE_APP_OIDC_REDIRECT_URI` variable in the .env.local file must be updated to that of the web server. You will also need to update the Cognito TAMS Tools App Client (if using Cognito) or your own IDP (if not using Cognito) to ensure the Web server is allowed.**
+
+Then run the following command:
 
 ```bash
 npm run build
