@@ -65,6 +65,7 @@ const usePreferencesStore = create(
           { id: "timerange", visible: true },
           { id: "ts_offset", visible: false },
           { id: "last_duration", visible: false },
+          { id: "object_timerange", visible: false },
           { id: "sample_offset", visible: false },
           { id: "sample_count", visible: false },
           { id: "key_frame_count", visible: false },
