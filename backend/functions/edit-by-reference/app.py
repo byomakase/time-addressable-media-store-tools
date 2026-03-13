@@ -1,6 +1,5 @@
 import os
 import json
-import math
 import uuid
 from collections import defaultdict
 from collections.abc import Generator
@@ -22,8 +21,7 @@ logger = Logger()
 
 endpoint = os.environ["TAMS_ENDPOINT"]
 creds = Credentials(
-    scopes=["tams-api/read", "tams-api/write"],
-    secret_arn=os.environ["SECRET_ARN"]
+    scopes=["tams-api/read", "tams-api/write"], secret_arn=os.environ["SECRET_ARN"]
 )
 
 FORMAT_AUDIO = "urn:x-nmos:format:audio"
@@ -236,43 +234,6 @@ def get_flow_rate(flow: dict[str, Any]) -> float | None:
 
 
 @tracer.capture_method(capture_response=False)
-def calculate_sample_adjustments(
-    rate: float | None,
-    old_timerange: TimeRange,
-    intersection_timerange: TimeRange,
-    new_timerange: TimeRange,
-    sample_offset: int,
-) -> tuple[int, int | None]:
-    """
-    Calculate sample offset and count adjustments based on timeranges.
-
-    Args:
-        rate: The flow rate
-        old_timerange: The original timerange
-        intersection_timerange: The intersection timerange
-        new_timerange: The new timerange
-        sample_offset: The original sample offset
-
-    Returns:
-        A tuple of (adjusted_sample_offset, sample_count)
-    """
-    sample_count = None
-
-    if not rate or old_timerange == intersection_timerange:
-        return sample_offset, sample_count
-
-    if old_timerange.start != intersection_timerange.start:
-        sample_offset += math.floor(
-            rate * (intersection_timerange.start - old_timerange.start).to_float()
-        )
-
-    if old_timerange.length != new_timerange.length:
-        sample_count = math.floor(rate * intersection_timerange.length.to_float())
-
-    return sample_offset, sample_count
-
-
-@tracer.capture_method(capture_response=False)
 def calculate_segment_timeranges(
     segment: dict[str, Any], edit_timerange: str, next_start: Timestamp
 ) -> tuple[TimeRange, TimeRange, TimeRange]:
@@ -285,7 +246,7 @@ def calculate_segment_timeranges(
         next_start: The timestamp to use as the start of the new timerange
 
     Returns:
-        A tuple of (old_timerange, intersection_timerange, new_timerange)
+        A tuple of (intersection_timerange, new_timerange)
     """
     old_timerange = TimeRange.from_str(segment["timerange"])
     intersection_timerange = old_timerange.intersect_with(
@@ -296,7 +257,7 @@ def calculate_segment_timeranges(
         end=intersection_timerange.length + next_start,
         inclusivity=intersection_timerange.inclusivity,
     )
-    return old_timerange, intersection_timerange, new_timerange
+    return intersection_timerange, new_timerange
 
 
 @tracer.capture_method(capture_response=False)
@@ -304,8 +265,6 @@ def build_new_segment(
     segment: dict[str, Any],
     new_timerange: TimeRange,
     new_ts_offset: Timestamp,
-    sample_offset: int,
-    sample_count: int = None,
 ) -> dict[str, Any]:
     """
     Build a new segment object with the calculated values.
@@ -314,8 +273,6 @@ def build_new_segment(
         segment: The original segment dictionary
         new_timerange: The calculated new timerange for the segment
         new_ts_offset: The calculated new timestamp offset
-        sample_offset: The calculated sample offset
-        sample_count: The calculated sample count (optional)
 
     Returns:
         A new segment dictionary with updated values
@@ -324,8 +281,6 @@ def build_new_segment(
         "object_id": segment["object_id"],
         "timerange": str(new_timerange),
         **({"ts_offset": str(new_ts_offset)} if str(new_ts_offset) != "0:0" else {}),
-        **({"sample_offset": sample_offset} if sample_offset != 0 else {}),
-        **({"sample_count": sample_count} if sample_count else {}),
     }
 
 
@@ -374,16 +329,11 @@ def get_new_flows_and_segments(
             if flow_id not in flows:
                 continue
 
-            # Get rate for this flow
-            rate = get_flow_rate(flows[flow_id])
-
             # Process segments for this flow and edit item
             for segment in get_segments(flow_id, edit_item["timerange"]):
                 # Calculate timeranges
-                old_timerange, intersection_timerange, new_timerange = (
-                    calculate_segment_timeranges(
-                        segment, edit_item["timerange"], next_start[flow_id]
-                    )
+                intersection_timerange, new_timerange = calculate_segment_timeranges(
+                    segment, edit_item["timerange"], next_start[flow_id]
                 )
 
                 # Update next start time
@@ -395,20 +345,8 @@ def get_new_flows_and_segments(
                     old_ts_offset + new_timerange.start - intersection_timerange.start
                 )
 
-                # Handle sample offsets and counts
-                sample_offset = segment.get("sample_offset", 0)
-                sample_offset, sample_count = calculate_sample_adjustments(
-                    rate,
-                    old_timerange,
-                    intersection_timerange,
-                    new_timerange,
-                    sample_offset,
-                )
-
                 # Create and store the new segment
-                new_segment = build_new_segment(
-                    segment, new_timerange, new_ts_offset, sample_offset, sample_count
-                )
+                new_segment = build_new_segment(segment, new_timerange, new_ts_offset)
                 flow_segments[flows[flow_id]["id"]].append(new_segment)
 
     return flows, dict(flow_segments)

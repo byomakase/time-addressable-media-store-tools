@@ -14,7 +14,7 @@ from aws_lambda_powertools.utilities.batch import (
 )
 from aws_lambda_powertools.utilities.data_classes.sqs_event import SQSRecord
 from aws_lambda_powertools.utilities.typing import LambdaContext
-from mediatimestamp.immutable import TimeRange
+from mediatimestamp.immutable import TimeRange, Timestamp
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
@@ -31,40 +31,29 @@ TAMS_MEDIA_BUCKET = os.environ["TAMS_MEDIA_BUCKET"]
 
 
 @tracer.capture_method(capture_response=False)
-def get_flow_rate(flow):
-    """Extract frame_rate or sample_rate from flow metadata, returns None if not found"""
-    try:
-        if flow["format"] == "urn:x-nmos:format:video":
-            frame_rate = flow["essence_parameters"]["frame_rate"]
-            return frame_rate["numerator"] / frame_rate.get("denominator", 1)
-        elif flow["format"] == "urn:x-nmos:format:audio":
-            return flow["essence_parameters"]["sample_rate"]
-    except (KeyError, ZeroDivisionError):
-        pass
-    return None
-
-
-@tracer.capture_method(capture_response=False)
-def calculate_ffmpeg_timing(segment, rate):
+def calculate_ffmpeg_timing(segment):
     """Calculate -ss, -t, and -output_ts_offset parameters for TAMS segment"""
     try:
         # Parse segment timerange for duration
         segment_timerange = TimeRange.from_str(segment["timerange"])
         input_timing = {"-t": segment_timerange.length.to_unix_float()}
 
-        # Default timing to copy unless ts_offset is provided
+        # Default timing to copy unless ts_offset is provided or timeranges differ
         output_timing = {"-copyts": None}
-        if segment.get("ts_offset"):
+        if segment.get("ts_offset") or segment.get("timerange") != segment.get(
+            "object_timerange"
+        ):
+            object_timerange = TimeRange.from_str(segment.get("object_timerange", ""))
+            ts_offset = Timestamp.from_str(segment.get("ts_offset", "0:0"))
+            skip = segment_timerange.start.to_unix_float() - (
+                object_timerange.start.to_unix_float() + ts_offset.to_unix_float()
+            )
             output_timing = {
                 "-muxpreload": "0",
                 "-muxdelay": "0",
-                # Use ts_offset for output timing adjustment
                 "-output_ts_offset": segment_timerange.start.to_unix_float(),
             }
-
-        # Use sample_offset for file position (only if rate is available)
-        if rate is not None and segment.get("sample_offset"):
-            input_timing["-ss"] = segment["sample_offset"] / rate
+            input_timing["-ss"] = skip
 
         return {"input": input_timing, "output": output_timing}
     except (KeyError, ValueError, ZeroDivisionError):
@@ -223,13 +212,9 @@ def download_objects_parallel(s3_objects):
 
 @tracer.capture_method(capture_response=False)
 def process_message(message):
-    flow_rate = None
-    if message.get("flow"):
-        flow_rate = get_flow_rate(message["flow"])
-
     for segment in message.get("segments", []):
         logger.info(f'Processing Object Id: {segment["object_id"]}...')
-        timing_args = calculate_ffmpeg_timing(segment, flow_rate)
+        timing_args = calculate_ffmpeg_timing(segment)
         get_segment = s3.get_object(Bucket=TAMS_MEDIA_BUCKET, Key=segment["object_id"])
         output = execute_ffmpeg_memory(
             get_segment["Body"].read(),

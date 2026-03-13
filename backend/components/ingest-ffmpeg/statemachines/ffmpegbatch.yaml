@@ -48,6 +48,7 @@ States:
         presigned: False
         timerange: >-
           {% $timerange %}
+        include_object_timerange: True
     Assign:
       nextKey: >-
         {% $states.result.Headers.`x-paging-nextkey` ? $states.result.Headers.`x-paging-nextkey`[0] : null %}
@@ -136,6 +137,7 @@ States:
           {% $timerange %}
         page: >-
           {% $nextKey %}
+        include_object_timerange: True
     Assign:
       nextKey: >-
         {% $states.result.Headers.`x-paging-nextkey` ? $states.result.Headers.`x-paging-nextkey`[0] : null %}
