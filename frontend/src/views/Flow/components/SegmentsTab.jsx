@@ -1,10 +1,13 @@
+import { useState } from "react";
 import {
   Box,
+  Button,
   CollectionPreferences,
   SpaceBetween,
   Table,
 } from "@cloudscape-design/components";
 import usePreferencesStore from "@/stores/usePreferencesStore";
+import ObjectModal from "./ObjectModal";
 
 import { SEGMENT_COUNT, DATE_FORMAT } from "@/constants";
 import { parseTimerangeDateTime } from "@/utils/timerange";
@@ -14,12 +17,23 @@ const SegmentsTab = ({ flowId }) => {
   const preferences = usePreferencesStore((state) => state.segmentsPreferences);
   const setPreferences = usePreferencesStore((state) => state.setSegmentsPreferences);
   const { segments, isLoading: loadingSegments } = useLastN(flowId, SEGMENT_COUNT);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [objectId, setObjectId] = useState(null);
 
   const columnDefinitions = [
     {
       id: "id",
       header: "Object Id",
-      cell: (item) => item.object_id,
+      cell: (item) => (
+        <>
+          {item.object_id}
+          <Button
+            variant="icon"
+            iconName="status-info"
+            onClick={() => handleOnClick({ item })}
+          />
+        </>
+      ),
       isRowHeader: true,
     },
     {
@@ -83,40 +97,52 @@ const SegmentsTab = ({ flowId }) => {
     title: "Preferences",
   };
 
+  const handleOnClick = ({ item }) => {
+    setObjectId(item.object_id);
+    setModalVisible(true);
+  };
 
   return (
-    <SpaceBetween size="xs">
-      <i>Showing last {SEGMENT_COUNT} segments</i>
-      <Table
-        trackBy="object_id"
-        variant="borderless"
-        columnDefinitions={columnDefinitions}
-        columnDisplay={preferences.contentDisplay}
-        contentDensity="compact"
-        items={
-          segments &&
-          segments.map((segment) => ({
-            ...segment,
-            datetimeTimerange: parseTimerangeDateTime(segment.timerange),
-          }))
-        }
-        sortingDisabled
-        loading={loadingSegments}
-        loadingText="Loading segments..."
-        empty={
-          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
-            <b>No segments</b>
-          </Box>
-        }
-        preferences={
-          <CollectionPreferences
-            {...collectionPreferencesProps}
-            preferences={preferences}
-            onConfirm={({ detail }) => setPreferences(detail)}
-          />
-        }
+    <>
+      <SpaceBetween size="xs">
+        <i>Showing last {SEGMENT_COUNT} segments</i>
+        <Table
+          trackBy="object_id"
+          variant="borderless"
+          columnDefinitions={columnDefinitions}
+          columnDisplay={preferences.contentDisplay}
+          contentDensity="compact"
+          items={
+            segments &&
+            segments.map((segment) => ({
+              ...segment,
+              datetimeTimerange: parseTimerangeDateTime(segment.timerange),
+            }))
+          }
+          sortingDisabled
+          loading={loadingSegments}
+          loadingText="Loading segments..."
+          empty={
+            <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+              <b>No segments</b>
+            </Box>
+          }
+          preferences={
+            <CollectionPreferences
+              {...collectionPreferencesProps}
+              preferences={preferences}
+              onConfirm={({ detail }) => setPreferences(detail)}
+            />
+          }
+        />
+      </SpaceBetween>
+      <ObjectModal
+        modalVisible={modalVisible}
+        setModalVisible={setModalVisible}
+        objectId={objectId}
+        setObjectId={setObjectId}
       />
-    </SpaceBetween>
+    </>
   );
 };
 
