@@ -410,7 +410,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
             {
                 "flowId": flow_id,
                 "manifestLocation": uri,
-                "lastMediaSequence": 1,
+                "lastMediaSequence": -1,
                 "lastTimestamp": f"{flow_start}:0",
                 "eventTimestamp": int(time.time() * 1000),
             }
