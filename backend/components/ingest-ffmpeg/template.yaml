@@ -42,7 +42,7 @@ Globals:
     Timeout: 30
     MemorySize: 128
     Handler: app.lambda_handler
-    Runtime: python3.13
+    Runtime: python3.14
     Architectures:
       - arm64
 
@@ -139,7 +139,7 @@ Resources:
     Properties:
       CodeUri: functions/api-ffmpeg-ingestion/
       Layers:
-        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python314-arm64:30
       Environment:
         Variables:
           POWERTOOLS_SERVICE_NAME: tams-tools
@@ -226,7 +226,7 @@ Resources:
     Properties:
       CodeUri: functions/rule-cleanup/
       Layers:
-        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python314-arm64:30
       Environment:
         Variables:
           POWERTOOLS_SERVICE_NAME: tams-tools
@@ -364,7 +364,7 @@ Resources:
       RetentionPolicy: Delete
       ContentUri: layers/ffmpeg
       CompatibleRuntimes:
-        - python3.13
+        - python3.14
       CompatibleArchitectures:
         - arm64
 
@@ -384,7 +384,7 @@ Resources:
         Size: 10240
       CodeUri: functions/ffmpeg-worker/
       Layers:
-        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python314-arm64:30
         - !Ref FFmpegLayer
       Environment:
         Variables:

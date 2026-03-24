@@ -143,7 +143,7 @@ Globals:
     Timeout: 30
     MemorySize: 128
     Handler: app.lambda_handler
-    Runtime: python3.13
+    Runtime: python3.14
     Architectures:
       - arm64
 
@@ -151,13 +151,13 @@ Resources:
   OpenIdAuthLayer:
     Type: AWS::Serverless::LayerVersion
     Metadata:
-      BuildMethod: python3.13
+      BuildMethod: python3.14
       BuildArchitecture: arm64
     Properties:
       RetentionPolicy: Delete
       ContentUri: layers/openid-auth
       CompatibleRuntimes:
-        - python3.13
+        - python3.14
       CompatibleArchitectures:
         - arm64
 
@@ -174,7 +174,7 @@ Resources:
       Timeout: 30
       MemorySize: 128
       Handler: app.lambda_handler
-      Runtime: python3.13
+      Runtime: python3.14
       CodeUri: functions/custom_resource/
       Policies:
         - Version: "2012-10-17"
@@ -387,7 +387,7 @@ Resources:
       MemorySize: 1024
       CodeUri: functions/edit-by-reference/
       Layers:
-        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:7
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python314-arm64:30
         - !Ref OpenIdAuthLayer
       Environment:
         Variables:
